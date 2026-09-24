@@ -29,7 +29,7 @@ around day 3. **Hello World** makes the learning loop visible:
 <td width="33%" valign="top">
 
 ### 📝 Log
-What you learned today, **in your own words**. A full day takes under two minutes.
+What you learned today, **in your own words**, with a small code example and its output. A full day takes under two minutes.
 
 </td>
 <td width="33%" valign="top">
@@ -47,13 +47,15 @@ How it felt, and **proof** that the hard days were followed by breakthroughs.
 </tr>
 </table>
 
-There's no code editor or compiler inside. You code wherever you already do;
-Hello World tracks time, concepts, problems and feelings.
+There's no compiler inside. You run code wherever you already do, then paste
+the output back. Hello World tracks time, concepts, examples, problems and
+feelings.
 
 ## ✨ Features
 
 | | |
 |---|---|
+| 🧠 **What I learned** | Each concept gets a **note** in your own words, a **code canvas** (line numbers, Tab to indent) for an example, and an **output** box for what your compiler printed. |
 | ⏱️ **Session & problem timers** | Pause, resume, crash recovery. Late-night sessions count toward the previous day. |
 | 🙂 **Mood check-ins** | Before and after every session, on a 1–5 scale from *Drained* to *Fired up*. |
 | 📓 **Diary** | Feeling tags, with automatic links to the concepts you wrote about. |
@@ -126,8 +128,9 @@ and the Rust core ever disagree.
 Pushing a `v*` tag builds signed Windows installers through
 `.github/workflows/release.yml`. Updates are signed with a private key kept
 **outside** this repo (`~/.tauri/hello-world.key`). Add it as the
-`TAURI_SIGNING_PRIVATE_KEY` repository secret. A Windows code-signing
-certificate is recommended before a public release.
+`TAURI_SIGNING_PRIVATE_KEY` repository secret. The app checks
+`latest.json` on this repo's latest release for updates. A Windows
+code-signing certificate is recommended before a public release.
 
 ## 🧭 Decisions
 
