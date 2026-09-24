@@ -9,8 +9,8 @@ name = "hello_world_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [profile.release]
-codegen-units = 1
-lto = true
+codegen-units = 16
+lto = "thin"
 opt-level = "s"
 panic = "abort"
 strip = true
