@@ -92,7 +92,9 @@ export default function OnboardingPage() {
             <span key={n} className={[s.stepDot, n <= step && s.stepDotOn].filter(Boolean).join(' ')} />
           ))}
         </div>
-        <p className="muted">{t('onboarding.step', { n: step })}</p>
+        <p className="muted">
+          {t('onboarding.tagline')} · {t('onboarding.step', { n: step })}
+        </p>
 
         {step === 1 && (
           <>

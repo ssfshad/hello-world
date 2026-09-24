@@ -4,7 +4,7 @@
 
 # Hello World
 
-**A learning journal and emotional diary for new programmers.**
+**A journal for new coders.**
 
 *Log what you learned. Practise it. See that struggle is followed by progress.*
 

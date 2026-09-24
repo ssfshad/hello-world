@@ -74,7 +74,10 @@ export function Layout() {
           <span className={s.brandMark} aria-hidden="true">
             <Code2 size={18} />
           </span>
-          <span className={s.brandText}>{t('app.name')}</span>
+          <span className={s.brandText}>
+            {t('app.name')}
+            <span className={s.brandTagline}>{t('app.tagline')}</span>
+          </span>
         </div>
         <ul className={s.nav}>
           {NAV.map((n, i) => (

@@ -132,6 +132,15 @@
 
 .shellCollapsed .label,
 .shellCollapsed .kbd,
+.brandTagline {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--on-dark-muted);
+  letter-spacing: 0.01em;
+}
 .shellCollapsed .brandText,
 .shellCollapsed .localText,
 .shellCollapsed .signature,

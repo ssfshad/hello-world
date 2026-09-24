@@ -1,6 +1,7 @@
 {
   "app": {
     "name": "Hello World",
+    "tagline": "a journal for new coders",
     "localOnly": "All data stored on this device",
     "signature": "by Sh@d",
     "madeBy": "Made by Sh@d",
@@ -109,6 +110,7 @@
   },
   "onboarding": {
     "title": "Welcome to Hello World",
+    "tagline": "Hello World — a journal for new coders",
     "step": "Step {{n}} of 3",
     "nameTitle": "What should we call you?",
     "namePlaceholder": "Your name",

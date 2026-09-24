@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Hello World",
+        "title": "Hello World — a journal for new coders",
         "width": 1320,
         "height": 860,
         "minWidth": 1024,
@@ -44,7 +44,7 @@
     "targets": ["nsis", "msi"],
     "publisher": "Hello World",
     "category": "Education",
-    "shortDescription": "A learning journal for new programmers",
+    "shortDescription": "A journal for new coders",
     "longDescription": "Log what you learned, practice it, and reflect on how it felt. All data stays on your device.",
     "createUpdaterArtifacts": true,
     "icon": [
