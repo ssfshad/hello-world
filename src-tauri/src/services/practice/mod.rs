@@ -341,6 +341,8 @@ mod tests {
                         category_id: Some("cc-loops".into()),
                         note: note.map(str::to_string),
                         source_resource_id: None,
+                        example_code: None,
+                        example_output: None,
                         day_key: None,
                     },
                     now,

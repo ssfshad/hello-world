@@ -65,7 +65,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg2MDkwNzYzRjhDRDQxNDAKUldSQVFjMzRZd2NKaHVDRmhmWldiWTloc0h4V3NLUWQ0NjZvTFRkSitPQldYT0tCdDFBczk5RU0K",
       "endpoints": [
-        "https://github.com/hello-world-app/hello-world/releases/latest/download/latest.json"
+        "https://github.com/ssfshad/hello-world/releases/latest/download/latest.json"
       ],
       "windows": { "installMode": "passive" }
     }

@@ -17,6 +17,8 @@ pub struct Concept {
     pub category_id: Option<String>,
     pub category_name: Option<String>,
     pub note: Option<String>,
+    pub example_code: Option<String>,
+    pub example_output: Option<String>,
     pub source_resource_id: Option<String>,
     pub learned_day_key: String,
     pub review_stage: Option<i64>,
@@ -32,7 +34,12 @@ pub struct ConceptCategory {
 }
 
 const COLS: &str = "c.id, c.language_id, c.name, c.category_id, cc.name, c.note,
-    c.source_resource_id, c.learned_day_key, ri.stage, ri.due_day_key, c.created_at, c.updated_at";
+    c.source_resource_id, c.learned_day_key, ri.stage, ri.due_day_key, c.created_at, c.updated_at,
+    c.example_code, c.example_output";
+
+/// Limits for the worked example (code, and the output pasted from a compiler).
+pub const MAX_CODE: usize = 20_000;
+pub const MAX_OUTPUT: usize = 20_000;
 const FROM: &str = "FROM concepts c
     LEFT JOIN concept_categories cc ON cc.id = c.category_id
     LEFT JOIN review_items ri ON ri.concept_id = c.id";
@@ -51,7 +58,20 @@ fn map(r: &Row) -> rusqlite::Result<Concept> {
         due_day_key: r.get(9)?,
         created_at: r.get(10)?,
         updated_at: r.get(11)?,
+        example_code: r.get(12)?,
+        example_output: r.get(13)?,
     })
+}
+
+/// Keeps code exactly as typed (indentation matters); an all-blank value becomes None.
+fn clean_block(s: Option<&str>, what: &str, max: usize) -> AppResult<Option<String>> {
+    match s.filter(|v| !v.trim().is_empty()) {
+        None => Ok(None),
+        Some(v) if v.chars().count() > max => {
+            Err(AppError::validation(format!("{what} must be at most {max} characters")))
+        }
+        Some(v) => Ok(Some(v.trim_end().trim_start_matches(['\n', '\r']).to_string())),
+    }
 }
 
 pub fn get(conn: &Connection, id: &str) -> AppResult<Concept> {
@@ -74,10 +94,11 @@ pub fn names_for(conn: &Connection, ids: &[String]) -> AppResult<Vec<String>> {
 }
 
 fn index(conn: &Connection, c: &Concept) -> AppResult<()> {
-    let text = match &c.note {
-        Some(n) => format!("{}\n{}", c.name, n),
-        None => c.name.clone(),
-    };
+    let mut text = c.name.clone();
+    for part in [&c.note, &c.example_code].into_iter().flatten() {
+        text.push('\n');
+        text.push_str(part);
+    }
     search::upsert(conn, "concept", &c.id, Some(&c.learned_day_key), &text)
 }
 
@@ -101,6 +122,10 @@ pub struct ConceptInput {
     pub name: String,
     pub category_id: Option<String>,
     pub note: Option<String>,
+    #[serde(default)]
+    pub example_code: Option<String>,
+    #[serde(default)]
+    pub example_output: Option<String>,
     pub source_resource_id: Option<String>,
     pub day_key: Option<String>,
 }
@@ -108,6 +133,8 @@ pub struct ConceptInput {
 pub fn add(conn: &Connection, input: ConceptInput, now: DateTime<Utc>) -> AppResult<Concept> {
     let name = clean_text(&input.name, "Concept name", 1, 60)?;
     let note = clean_opt(input.note.as_deref(), "Note", 4000)?;
+    let code = clean_block(input.example_code.as_deref(), "Example code", MAX_CODE)?;
+    let output = clean_block(input.example_output.as_deref(), "Output", MAX_OUTPUT)?;
     profile::get_language(conn, &input.language_id)?;
     check_category(conn, input.category_id.as_deref())?;
     check_resource(conn, input.source_resource_id.as_deref())?;
@@ -136,8 +163,9 @@ pub fn add(conn: &Connection, input: ConceptInput, now: DateTime<Utc>) -> AppRes
             // Re-logging a deleted concept revives it on the new day.
             conn.execute(
                 "UPDATE concepts SET deleted_at=NULL, name=?1, category_id=?2, note=?3,
-                        source_resource_id=?4, learned_day_key=?5, updated_at=?6 WHERE id=?7",
-                params![name, input.category_id, note, input.source_resource_id, day, ts, id],
+                        source_resource_id=?4, learned_day_key=?5, updated_at=?6,
+                        example_code=?8, example_output=?9 WHERE id=?7",
+                params![name, input.category_id, note, input.source_resource_id, day, ts, id, code, output],
             )?;
             conn.execute("DELETE FROM review_items WHERE concept_id=?1", [&id])?;
             id
@@ -146,9 +174,9 @@ pub fn add(conn: &Connection, input: ConceptInput, now: DateTime<Utc>) -> AppRes
             let id = new_id();
             conn.execute(
                 "INSERT INTO concepts (id, language_id, name, category_id, note, source_resource_id,
-                        learned_day_key, created_at, updated_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)",
-                params![id, input.language_id, name, input.category_id, note, input.source_resource_id, day, ts],
+                        learned_day_key, created_at, updated_at, example_code, example_output)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?10)",
+                params![id, input.language_id, name, input.category_id, note, input.source_resource_id, day, ts, code, output],
             )?;
             id
         }
@@ -170,6 +198,10 @@ pub struct ConceptUpdate {
     pub note: Option<Option<String>>,
     #[serde(default, deserialize_with = "super::double_option")]
     pub source_resource_id: Option<Option<String>>,
+    #[serde(default, deserialize_with = "super::double_option")]
+    pub example_code: Option<Option<String>>,
+    #[serde(default, deserialize_with = "super::double_option")]
+    pub example_output: Option<Option<String>>,
 }
 
 pub fn update(conn: &Connection, input: ConceptUpdate, now: DateTime<Utc>) -> AppResult<Concept> {
@@ -200,10 +232,17 @@ pub fn update(conn: &Connection, input: ConceptUpdate, now: DateTime<Utc>) -> Ap
         check_resource(conn, src.as_deref())?;
         c.source_resource_id = src;
     }
+    if let Some(code) = input.example_code {
+        c.example_code = clean_block(code.as_deref(), "Example code", MAX_CODE)?;
+    }
+    if let Some(out) = input.example_output {
+        c.example_output = clean_block(out.as_deref(), "Output", MAX_OUTPUT)?;
+    }
     conn.execute(
-        "UPDATE concepts SET name=?1, category_id=?2, note=?3, source_resource_id=?4, updated_at=?5
+        "UPDATE concepts SET name=?1, category_id=?2, note=?3, source_resource_id=?4, updated_at=?5,
+                example_code=?7, example_output=?8
           WHERE id=?6",
-        params![c.name, c.category_id, c.note, c.source_resource_id, now_str(now), c.id],
+        params![c.name, c.category_id, c.note, c.source_resource_id, now_str(now), c.id, c.example_code, c.example_output],
     )?;
     let c = get(conn, &c.id)?;
     index(conn, &c)?;
@@ -309,6 +348,8 @@ mod tests {
             category_id: Some("cc-loops".into()),
             note: Some("repeat a block".into()),
             source_resource_id: None,
+            example_code: None,
+            example_output: None,
             day_key: Some("2026-09-24".into()),
         }
     }
@@ -335,6 +376,43 @@ mod tests {
         assert!(list(&c, None, None).unwrap().is_empty());
         let again = add(&c, input(&lang, "Lists"), now).unwrap();
         assert_eq!(again.id, k.id);
+    }
+
+    #[test]
+    fn example_code_and_output_keep_indentation() {
+        let (c, lang, now) = setup();
+        let code = "\nfor i in range(3):\n    print(i)\n\n";
+        let k = add(
+            &c,
+            ConceptInput {
+                example_code: Some(code.into()),
+                example_output: Some("0\n1\n2\n".into()),
+                ..input(&lang, "range")
+            },
+            now,
+        )
+        .unwrap();
+        assert_eq!(k.example_code.as_deref(), Some("for i in range(3):\n    print(i)"));
+        assert_eq!(k.example_output.as_deref(), Some("0\n1\n2"));
+        assert_eq!(super::super::search::query(&c, "print", &Default::default()).unwrap().len(), 1);
+        let u = update(
+            &c,
+            serde_json::from_value(serde_json::json!({"id": k.id, "example_output": "0\n1\n2\n3"})).unwrap(),
+            now,
+        )
+        .unwrap();
+        assert_eq!(u.example_output.as_deref(), Some("0\n1\n2\n3"));
+        assert!(u.example_code.is_some(), "untouched field is kept");
+        let cleared = update(
+            &c,
+            serde_json::from_value(serde_json::json!({"id": k.id, "example_code": null, "example_output": "  "}))
+                .unwrap(),
+            now,
+        )
+        .unwrap();
+        assert!(cleared.example_code.is_none() && cleared.example_output.is_none());
+        let too_long = "x".repeat(MAX_CODE + 1);
+        assert!(add(&c, ConceptInput { example_code: Some(too_long), ..input(&lang, "big") }, now).is_err());
     }
 
     #[test]

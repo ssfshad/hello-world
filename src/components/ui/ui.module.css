@@ -247,6 +247,81 @@
   border-color: var(--danger);
 }
 
+/* ───── Code canvas ───── */
+.code {
+  display: flex;
+  border: 1px solid var(--input-border);
+  border-radius: var(--r-input);
+  background: var(--surface);
+  overflow: hidden;
+}
+.code:focus-within {
+  border-color: var(--progress);
+  box-shadow: var(--focus-ring);
+}
+.codeGutter,
+.codeArea {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.codeGutter {
+  flex: none;
+  min-width: 3ch;
+  padding: 10px 8px 10px 12px;
+  text-align: right;
+  white-space: pre;
+  overflow: hidden;
+  color: var(--muted);
+  background: var(--line-soft);
+  border-right: 1px solid var(--line);
+  user-select: none;
+}
+.codeArea {
+  flex: 1;
+  min-width: 0;
+  min-height: 120px;
+  padding: 10px 12px;
+  border: 0;
+  outline: none;
+  resize: vertical;
+  background: transparent;
+  color: var(--ink);
+  white-space: pre;
+  overflow: auto;
+  tab-size: 4;
+}
+.codeOutput {
+  background: var(--sidebar);
+  border-color: var(--sidebar);
+}
+.codeOutput .codeArea {
+  min-height: 72px;
+  color: var(--on-dark);
+}
+.codeOutput .codeArea::placeholder {
+  color: var(--on-dark-muted);
+}
+/* Read-only rendering of a saved example */
+.codeBlock {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-input);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre;
+  overflow-x: auto;
+  background: var(--line-soft);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.codeBlockOutput {
+  background: var(--sidebar);
+  border-color: var(--sidebar);
+  color: var(--on-dark);
+}
+
 /* ───── Slider ───── */
 .slider {
   width: 100%;

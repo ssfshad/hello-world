@@ -105,6 +105,8 @@ export default function TodayPage() {
       language_id: primary.id,
       name: c.name,
       note: c.note,
+      example_code: c.example_code,
+      example_output: c.example_output,
       category_id: c.category_id,
       source_resource_id: sourceId,
       day_key: dayKey,

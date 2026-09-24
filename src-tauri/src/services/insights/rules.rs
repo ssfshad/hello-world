@@ -420,6 +420,8 @@ mod tests {
                 category_id: None,
                 note: None,
                 source_resource_id: None,
+                example_code: None,
+                example_output: None,
                 day_key: Some(day.into()),
             },
             parse_ts(&format!("{day}T10:00:00Z")).unwrap(),

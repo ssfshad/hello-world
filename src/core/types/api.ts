@@ -154,6 +154,10 @@ export interface Concept {
   category_id: string | null;
   category_name: string | null;
   note: string | null;
+  /** worked example the learner wrote (indentation preserved) */
+  example_code: string | null;
+  /** output the learner pasted from their own compiler */
+  example_output: string | null;
   source_resource_id: string | null;
   learned_day_key: string;
   review_stage: number | null;
@@ -167,6 +171,8 @@ export interface ConceptInput {
   name: string;
   category_id?: string | null;
   note?: string | null;
+  example_code?: string | null;
+  example_output?: string | null;
   source_resource_id?: string | null;
   /** defaults to today */
   day_key?: string | null;
@@ -177,6 +183,8 @@ export interface ConceptUpdate {
   name?: string;
   category_id?: string | null;
   note?: string | null;
+  example_code?: string | null;
+  example_output?: string | null;
   source_resource_id?: string | null;
 }
 

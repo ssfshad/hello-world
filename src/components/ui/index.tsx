@@ -7,6 +7,7 @@ import {
   useState,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
@@ -280,6 +281,110 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
     );
   },
 );
+
+/**
+ * Monospace code canvas with line numbers. Tab indents (Shift+Tab outdents);
+ * press Esc first to Tab out of the field. The "output" variant is a
+ * terminal-style box for pasting what a compiler printed.
+ */
+export function CodeCanvas({
+  label,
+  hint,
+  error,
+  hideLabel,
+  id,
+  value,
+  onChange,
+  variant = 'code',
+  placeholder,
+  maxLength,
+  minRows = 6,
+  autoFocus,
+}: FieldShell & {
+  id?: string;
+  value: string;
+  onChange: (v: string) => void;
+  variant?: 'code' | 'output';
+  placeholder?: string;
+  maxLength?: number;
+  minRows?: number;
+  autoFocus?: boolean;
+}) {
+  const auto = useId();
+  const fid = id ?? auto;
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const gutter = useRef<HTMLDivElement>(null);
+  const escaped = useRef(false);
+  const isCode = variant === 'code';
+  const lines = Math.max(minRows, value.split('\n').length);
+
+  const replace = (start: number, end: number, text: string, caretStart: number, caretEnd = caretStart) => {
+    const next = value.slice(0, start) + text + value.slice(end);
+    if (maxLength && next.length > maxLength) return;
+    onChange(next);
+    requestAnimationFrame(() => ref.current?.setSelectionRange(caretStart, caretEnd));
+  };
+
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Escape') {
+      escaped.current = true;
+      return;
+    }
+    if (e.key !== 'Tab' || !isCode || escaped.current) {
+      escaped.current = false;
+      return;
+    }
+    e.preventDefault();
+    const el = e.currentTarget;
+    const { selectionStart: a, selectionEnd: b } = el;
+    const lineStart = value.lastIndexOf('\n', a - 1) + 1;
+    if (!e.shiftKey && a === b) {
+      replace(a, b, '    ', a + 4);
+      return;
+    }
+    // Indent / outdent every selected line.
+    const block = value.slice(lineStart, b);
+    const changed = e.shiftKey
+      ? block.replace(/^( {1,4}|\t)/gm, '')
+      : block.replace(/^/gm, '    ');
+    const firstShift = e.shiftKey ? -(block.match(/^( {1,4}|\t)/)?.[0].length ?? 0) : 4;
+    replace(lineStart, b, changed, Math.max(lineStart, a + firstShift), lineStart + changed.length);
+  };
+
+  return (
+    <FieldWrap id={fid} label={label} hint={hint} error={error} hideLabel={hideLabel}>
+      <div className={cx(s.code, !isCode && s.codeOutput)}>
+        {isCode && (
+          <div ref={gutter} className={s.codeGutter} aria-hidden="true">
+            {Array.from({ length: lines }, (_, i) => i + 1).join('\n')}
+          </div>
+        )}
+        <textarea
+          ref={ref}
+          id={fid}
+          className={s.codeArea}
+          value={value}
+          rows={minRows}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          autoFocus={autoFocus}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoComplete="off"
+          autoCorrect="off"
+          wrap="off"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy(fid, hint, error)}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          onScroll={(e) => {
+            if (gutter.current) gutter.current.scrollTop = e.currentTarget.scrollTop;
+          }}
+        />
+      </div>
+    </FieldWrap>
+  );
+}
 
 export const Select = forwardRef<
   HTMLSelectElement,

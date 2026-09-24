@@ -11,6 +11,8 @@ const concept = (name: string): Concept => ({
   category_id: null,
   category_name: 'Loops',
   note: null,
+  example_code: null,
+  example_output: null,
   source_resource_id: null,
   learned_day_key: '2026-09-20',
   review_stage: 0,
@@ -47,20 +49,24 @@ describe('Concept autocomplete', () => {
     expect(onAdd).not.toHaveBeenCalled();
   });
 
-  it('opens the inline expander and saves note + category', async () => {
+  it('opens the inline expander and saves note, example code, output and category', async () => {
     const user = userEvent.setup();
     const onAdd = vi.fn();
     const { container } = render(
       <ConceptInput search={() => []} categories={[{ id: 'cc-lists', name: 'Lists' }]} onAdd={onAdd} />,
     );
     await user.type(screen.getByRole('combobox'), 'list slicing{Enter}');
-    await user.type(screen.getByLabelText('In my words'), 'take a piece of a list');
+    await user.type(screen.getByLabelText('Note — in my words'), 'take a piece of a list');
+    await user.type(screen.getByLabelText('Example code'), 'xs = [[1, 2, 3]{enter}print(xs[[1:])');
+    await user.type(screen.getByLabelText('Output'), '[[2, 3]');
     await user.click(screen.getByRole('button', { name: 'Lists' }));
     await expectNoA11yViolations(container);
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(onAdd).toHaveBeenCalledWith({
       name: 'list slicing',
       note: 'take a piece of a list',
+      example_code: 'xs = [1, 2, 3]\nprint(xs[1:])',
+      example_output: '[2, 3]',
       category_id: 'cc-lists',
       source_resource_id: null,
       source_url: null,

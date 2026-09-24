@@ -2,13 +2,15 @@ import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import type { Concept, ConceptCategory } from '@/core/types/api';
-import { Button, Chip, ChipGroup, Select, TextArea, TextField, uiStyles } from '@/components/ui';
+import { Button, Chip, ChipGroup, CodeCanvas, Select, TextArea, TextField, uiStyles } from '@/components/ui';
 import { conceptNameSchema } from '@/core/schemas';
 import s from './domain.module.css';
 
 export interface NewConcept {
   name: string;
   note: string | null;
+  example_code: string | null;
+  example_output: string | null;
   category_id: string | null;
   source_resource_id: string | null;
   source_url: string | null;
@@ -42,6 +44,8 @@ export function ConceptInput({
   const [active, setActive] = useState(-1);
   const [expanded, setExpanded] = useState(false);
   const [note, setNote] = useState('');
+  const [code, setCode] = useState('');
+  const [output, setOutput] = useState('');
   const [category, setCategory] = useState<string | null>(null);
   const [source, setSource] = useState('');
   const [sourceRes, setSourceRes] = useState('');
@@ -58,6 +62,8 @@ export function ConceptInput({
   const reset = () => {
     setName('');
     setNote('');
+    setCode('');
+    setOutput('');
     setCategory(null);
     setSource('');
     setSourceRes('');
@@ -84,6 +90,8 @@ export function ConceptInput({
     await onAdd({
       name: name.trim(),
       note: note.trim() || null,
+      example_code: code.trim() ? code : null,
+      example_output: output.trim() ? output : null,
       category_id: category,
       source_resource_id: sourceRes || null,
       source_url: source.trim() || null,
@@ -182,6 +190,24 @@ export function ConceptInput({
             style={{ minHeight: 64 }}
             autoFocus
           />
+          <CodeCanvas
+            label={t('today.codeLabel')}
+            hint={t('today.codeHint')}
+            placeholder={t('today.codePlaceholder')}
+            value={code}
+            onChange={setCode}
+            maxLength={20000}
+          />
+          <CodeCanvas
+            variant="output"
+            label={t('today.outputLabel')}
+            hint={t('today.outputHint')}
+            placeholder={t('today.outputPlaceholder')}
+            value={output}
+            onChange={setOutput}
+            maxLength={20000}
+            minRows={3}
+          />
           <ChipGroup label={t('today.categoryLabel')}>
             {categories.map((c) => (
               <Chip key={c.id} pressed={category === c.id} onToggle={() => setCategory(category === c.id ? null : c.id)}>
@@ -242,8 +268,33 @@ export function ConceptList({ concepts, onEdit }: { concepts: Concept[]; onEdit?
             )}
           </div>
           {c.note && <p className={s.conceptNote}>{c.note}</p>}
+          <ConceptExample concept={c} />
         </li>
       ))}
     </ul>
+  );
+}
+
+/** The saved worked example: code plus the output pasted from a compiler. */
+export function ConceptExample({ concept, open }: { concept: Concept; open?: boolean }) {
+  const { t } = useTranslation();
+  if (!concept.example_code && !concept.example_output) return null;
+  return (
+    <details className={s.example} open={open}>
+      <summary>{t('today.exampleToggle')}</summary>
+      <div className="stack" style={{ gap: 6 }}>
+        {concept.example_code && (
+          <pre className={uiStyles.codeBlock} aria-label={t('today.codeLabel')}>
+            <code>{concept.example_code}</code>
+          </pre>
+        )}
+        <span className="muted" style={{ fontSize: '0.8rem' }}>
+          {t('today.outputLabel')}
+        </span>
+        <pre className={`${uiStyles.codeBlock} ${uiStyles.codeBlockOutput}`} aria-label={t('today.outputLabel')}>
+          {concept.example_output ?? t('today.exampleNoOutput')}
+        </pre>
+      </div>
+    </details>
   );
 }

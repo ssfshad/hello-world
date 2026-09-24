@@ -49,6 +49,8 @@ interface ConceptRow {
   name: string;
   category_id: string | null;
   note: string | null;
+  example_code: string | null;
+  example_output: string | null;
   source_resource_id: string | null;
   learned_day_key: string;
   deleted: boolean;
@@ -255,6 +257,12 @@ function attemptDto(a: AttemptRow): A.Attempt {
   };
 }
 
+/** Mirrors the core: all-blank → null; otherwise keep indentation, trim trailing space. */
+function blank(v: string | null | undefined): string | null {
+  if (!v || !v.trim()) return null;
+  return v.replace(/\s+$/, '').replace(/^[\r\n]+/, '');
+}
+
 function conceptDto(c: ConceptRow): A.Concept {
   const r = db.review.find((x) => x.concept_id === c.id);
   return {
@@ -264,6 +272,8 @@ function conceptDto(c: ConceptRow): A.Concept {
     category_id: c.category_id,
     category_name: db.categories.find((x) => x.id === c.category_id)?.name ?? null,
     note: c.note,
+    example_code: c.example_code,
+    example_output: c.example_output,
     source_resource_id: c.source_resource_id,
     learned_day_key: c.learned_day_key,
     review_stage: r?.stage ?? null,
@@ -1168,6 +1178,8 @@ const handlers: Record<A.CommandName, Handler> = {
       name,
       category_id: input.category_id ?? null,
       note: input.note ?? null,
+      example_code: blank(input.example_code),
+      example_output: blank(input.example_output),
       source_resource_id: input.source_resource_id ?? null,
       learned_day_key: input.day_key ?? today(),
       deleted: false,
@@ -1187,6 +1199,8 @@ const handlers: Record<A.CommandName, Handler> = {
     if (input.category_id !== undefined) c.category_id = input.category_id;
     if (input.note !== undefined) c.note = input.note;
     if (input.source_resource_id !== undefined) c.source_resource_id = input.source_resource_id;
+    if (input.example_code !== undefined) c.example_code = blank(input.example_code);
+    if (input.example_output !== undefined) c.example_output = blank(input.example_output);
     c.updated_at = nowIso();
     return conceptDto(c);
   },
@@ -2107,6 +2121,8 @@ function seed() {
         name,
         category_id: cat(category),
         note,
+        example_code: null,
+        example_output: null,
         source_resource_id: null,
         learned_day_key: day,
         deleted: false,

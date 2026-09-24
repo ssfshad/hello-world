@@ -6,7 +6,9 @@ use std::collections::BTreeSet;
 
 fn read(rel: &str) -> String {
     let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(rel);
-    std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("read {}: {e}", p.display()))
+    std::fs::read_to_string(&p)
+        .unwrap_or_else(|e| panic!("read {}: {e}", p.display()))
+        .replace("\r\n", "\n")
 }
 
 fn handler_commands() -> BTreeSet<String> {

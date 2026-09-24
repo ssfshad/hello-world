@@ -597,6 +597,8 @@ mod tests {
                 category_id: None,
                 note: None,
                 source_resource_id: None,
+                example_code: None,
+                example_output: None,
                 day_key: None,
             },
             now(),

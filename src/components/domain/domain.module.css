@@ -188,6 +188,16 @@
   gap: 4px;
   background: var(--surface);
 }
+.example summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--progress);
+  padding: 2px 0;
+}
+.example[open] summary {
+  margin-bottom: 6px;
+}
 .conceptNote {
   color: var(--ink-soft);
   font-size: 0.93rem;

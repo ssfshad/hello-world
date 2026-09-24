@@ -271,7 +271,15 @@ function DayPage({ dayKey }: { dayKey: string }) {
               categories={categories}
               onAdd={async (c: NewConcept) => {
                 if (!primary) return;
-                await conceptM.add.mutateAsync({ language_id: primary.id, name: c.name, note: c.note, category_id: c.category_id, day_key: dayKey });
+                await conceptM.add.mutateAsync({
+                  language_id: primary.id,
+                  name: c.name,
+                  note: c.note,
+                  example_code: c.example_code,
+                  example_output: c.example_output,
+                  category_id: c.category_id,
+                  day_key: dayKey,
+                });
               }}
             />
             <ConceptList concepts={day.concepts} onEdit={setEditConcept} />
