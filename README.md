@@ -51,6 +51,20 @@ There's no compiler inside. You run code wherever you already do, then paste
 the output back. Hello World tracks time, concepts, examples, problems and
 feelings.
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/today.png" alt="Today: session timer, mood check-in, what I learned, diary and usefulness" width="860" />
+  <br /><sub><b>Today</b>: timer, mood check-in, what you learned, diary and the usefulness score</sub>
+</p>
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/dashboard.png" alt="Dashboard: total time, concepts, problems solved alone and with help, streak, charts" /><br /><sub><b>Dashboard</b>: time, concepts, problems (alone · with help), streak and charts</sub></td>
+<td width="50%"><img src="docs/screenshots/practice.png" alt="Practice: build a prompt from your own concepts and paste the AI response back" /><br /><sub><b>Practice</b>: build a prompt from your own concepts, then paste the answer back</sub></td>
+</tr>
+</table>
+
 ## ✨ Features
 
 | | |
