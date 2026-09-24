@@ -1,0 +1,55 @@
+[package]
+name = "hello-world"
+version = "1.0.0"
+description = "Hello World — a learning journal for new programmers"
+edition = "2021"
+
+[lib]
+name = "hello_world_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+async-trait = "0.1.92"
+chrono = { version = "0.4.45", features = ["serde"] }
+chrono-tz = "0.10.4"
+hex = "0.4.3"
+iana-time-zone = "0.1.65"
+jsonschema = { version = "0.57.0", default-features = false }
+keyring = { version = "3", features = ["windows-native", "apple-native", "sync-secret-service", "crypto-rust"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls"] }
+rusqlite = { version = "0.40", features = ["bundled", "backup", "chrono"] }
+rusqlite_migration = "2.6.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-process = "2"
+tauri-plugin-window-state = "2"
+thiserror = "2.0.21"
+tokio = { version = "1.53.1", features = ["sync", "time", "macros", "rt"] }
+tokio-util = "0.7.19"
+tracing = "0.1.44"
+tracing-appender = "0.2.5"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
+uuid = { version = "1.26.1", features = ["v7"] }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
+
+[dev-dependencies]
+tempfile = "3.27.0"

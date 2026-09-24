@@ -1,0 +1,6 @@
+The text below was supposed to be JSON matching this schema but is invalid.
+Return ONLY the corrected JSON. Do not change the content of the problems.
+Errors: {{validation_errors}}
+Schema: {{schema}}
+Text:
+{{raw_text}}

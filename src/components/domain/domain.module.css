@@ -1,0 +1,320 @@
+/* ───── Timer card ───── */
+.timerCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.timerTop {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--on-dark-muted);
+  font-size: 0.87rem;
+}
+.timerDisplay {
+  color: #f6f3ec;
+}
+.timerControls {
+  display: flex;
+  gap: var(--s-2);
+}
+.darkBtn {
+  background: transparent;
+  border-color: #4a5c5f;
+  color: var(--on-dark);
+}
+.darkBtn:hover:not(:disabled) {
+  border-color: var(--on-dark-muted);
+  background: var(--sidebar-active);
+}
+.ranges {
+  list-style: none;
+  margin: 0;
+  padding: var(--s-3) 0 0;
+  border-top: 1px solid #33474a;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.87rem;
+}
+.ranges li {
+  display: flex;
+  justify-content: space-between;
+  color: var(--on-dark-muted);
+}
+.rangeLive {
+  color: #7fd1c9 !important;
+}
+.total {
+  display: flex;
+  justify-content: space-between;
+  color: var(--on-dark);
+  font-weight: 600;
+  font-size: 0.93rem;
+}
+.darkSelect select {
+  background: var(--sidebar-active);
+  color: var(--on-dark);
+  border-color: #4a5c5f;
+}
+.darkSelect label {
+  color: var(--on-dark-muted);
+}
+
+/* ───── Lists / rows ───── */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-row);
+  background: var(--surface);
+  min-width: 0;
+}
+.rowMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rowTitle {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.83rem;
+  color: var(--muted);
+}
+.rowTime {
+  font-family: var(--font-mono);
+  font-size: 0.93rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+.dot_solved {
+  background: var(--progress);
+}
+.dot_solved_with_help {
+  background: var(--heat-2);
+}
+.dot_in_progress {
+  background: transparent;
+  border: 2px solid var(--progress);
+}
+.dot_queued {
+  background: transparent;
+  border: 2px dashed var(--muted);
+}
+.dot_gave_up {
+  background: var(--muted);
+}
+.dot_revisit {
+  background: transparent;
+  border: 2px solid var(--feeling);
+}
+.flagged {
+  opacity: 0.6;
+}
+
+/* ───── Concepts ───── */
+.conceptBox {
+  position: relative;
+}
+.suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-input);
+  box-shadow: var(--shadow-modal);
+  max-height: 240px;
+  overflow: auto;
+}
+.suggest li {
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.suggest li[aria-selected='true'] {
+  background: var(--progress-tint);
+}
+.expander {
+  border: 1px solid var(--line);
+  border-radius: var(--r-row);
+  padding: var(--s-4);
+  background: var(--surface-warm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.conceptItem {
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-row);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface);
+}
+.conceptNote {
+  color: var(--ink-soft);
+  font-size: 0.93rem;
+  font-family: var(--font-serif);
+}
+
+/* ───── Diary ───── */
+.diaryText {
+  font-family: var(--font-serif);
+  font-size: 1.03rem;
+  line-height: 1.65;
+  min-height: 150px;
+  background: transparent;
+}
+.saveState {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ───── Usefulness ───── */
+.useRow {
+  display: grid;
+  grid-template-columns: 110px 1fr 44px;
+  gap: var(--s-3);
+  align-items: center;
+  font-size: 0.87rem;
+}
+.useValue {
+  font-family: var(--font-mono);
+  text-align: right;
+}
+.compare {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+/* ───── Insight card ───── */
+.insight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-5);
+  border-radius: var(--r-card);
+  background: var(--feeling-tint);
+  border: 1px solid color-mix(in srgb, var(--feeling) 30%, transparent);
+}
+.insightProgress {
+  background: var(--progress-tint);
+  border-color: color-mix(in srgb, var(--progress) 30%, transparent);
+}
+.insightLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--feeling-deep);
+}
+[data-theme='dark'] .insightLabel {
+  color: var(--feeling);
+}
+.insightProgress .insightLabel {
+  color: var(--progress-deep);
+}
+[data-theme='dark'] .insightProgress .insightLabel {
+  color: var(--progress);
+}
+.insightQuote {
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+/* ───── Problem detail ───── */
+.pre {
+  font-family: var(--font-mono);
+  font-size: 0.87rem;
+  background: var(--line-soft);
+  border-radius: var(--r-input);
+  padding: var(--s-3);
+  white-space: pre-wrap;
+  overflow-x: auto;
+  margin: 0;
+}
+.samples {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3);
+}
+.section h3 {
+  font-size: 0.93rem;
+  margin-bottom: 6px;
+}
+.section p {
+  white-space: pre-wrap;
+}
+.reveal {
+  border: 1px dashed var(--input-border);
+  border-radius: var(--r-row);
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.errorList {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--danger);
+  font-size: 0.87rem;
+}
+.warnList {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--feeling-deep);
+  font-size: 0.87rem;
+}
+[data-theme='dark'] .warnList {
+  color: var(--feeling);
+}
+.previewItem {
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-row);
+}

@@ -1,0 +1,9 @@
+Below is a diary entry written by a beginner programmer, followed by the list
+of programming concepts they have logged. Return ONLY a JSON array of the ids
+of concepts the entry talks about. Return [] if none apply. No other text.
+
+CONCEPTS (id: name)
+{{concepts}}
+
+DIARY ENTRY
+{{body}}

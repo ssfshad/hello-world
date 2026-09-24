@@ -1,0 +1,542 @@
+/* ───── Button ───── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: 40px;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-input);
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 0.93rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 120ms,
+    border-color 120ms,
+    color 120ms;
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.lg {
+  min-height: 44px;
+  padding: 0 var(--s-5);
+  font-size: 1rem;
+}
+.sm {
+  min-height: 32px;
+  padding: 0 var(--s-3);
+  font-size: 0.85rem;
+}
+.primary {
+  background: var(--progress);
+  color: #fff;
+}
+[data-theme='dark'] .primary {
+  color: #10191a;
+}
+.primary:hover:not(:disabled) {
+  background: var(--progress-deep);
+  color: #fff;
+}
+.secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--input-border);
+}
+.secondary:hover:not(:disabled) {
+  border-color: var(--progress);
+}
+.ghost {
+  background: transparent;
+  color: var(--ink-soft);
+}
+.ghost:hover:not(:disabled) {
+  background: var(--line-soft);
+}
+.danger {
+  background: var(--danger);
+  color: #fff;
+}
+.feeling {
+  background: var(--feeling);
+  color: #fff;
+}
+.block {
+  width: 100%;
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-input);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.iconBtn:hover:not(:disabled) {
+  background: var(--line-soft);
+  color: var(--ink);
+}
+.iconBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.iconBtnLg {
+  width: 44px;
+  height: 44px;
+}
+
+/* ───── Card ───── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: var(--s-5);
+  min-width: 0;
+}
+.cardWarm {
+  background: var(--surface-warm);
+}
+.cardDark {
+  background: var(--sidebar);
+  border-color: var(--sidebar);
+  color: var(--on-dark);
+}
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-bottom: var(--s-4);
+}
+.cardTitle {
+  font-size: 1.08rem;
+  font-weight: 600;
+}
+.cardHeadline {
+  font-family: var(--font-serif);
+  font-size: 1.33rem;
+  font-weight: 500;
+}
+
+/* ───── Stat card ───── */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.statLabel {
+  color: var(--muted);
+  font-size: 0.87rem;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.statValue {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.statSub {
+  font-size: 0.87rem;
+  color: var(--muted);
+}
+
+/* ───── Chips ───── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 32px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-chip);
+  border: 1px solid var(--input-border);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 0.87rem;
+  cursor: pointer;
+}
+.chip:hover {
+  border-color: var(--progress);
+}
+.chip[aria-pressed='true'] {
+  background: var(--progress-tint);
+  border-color: var(--progress);
+  color: var(--progress-deep);
+  font-weight: 600;
+}
+[data-theme='dark'] .chip[aria-pressed='true'] {
+  color: var(--progress);
+}
+.chipFeeling[aria-pressed='true'] {
+  background: var(--feeling-tint);
+  border-color: var(--feeling);
+  color: var(--feeling-deep);
+}
+[data-theme='dark'] .chipFeeling[aria-pressed='true'] {
+  color: var(--feeling);
+}
+.chipStatic {
+  cursor: default;
+}
+.chipDashed {
+  border-style: dashed;
+}
+.chipGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* ───── Fields ───── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.label {
+  font-size: 0.87rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.hint {
+  font-size: 0.83rem;
+  color: var(--muted);
+}
+.error {
+  font-size: 0.85rem;
+  color: var(--danger);
+}
+.input,
+.select,
+.textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: var(--r-input);
+  border: 1px solid var(--input-border);
+  background: var(--surface);
+  color: var(--ink);
+}
+.textarea {
+  resize: vertical;
+  min-height: 96px;
+  line-height: 1.55;
+}
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--progress);
+  box-shadow: var(--focus-ring);
+}
+.input[aria-invalid='true'],
+.textarea[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+/* ───── Slider ───── */
+.slider {
+  width: 100%;
+  accent-color: var(--progress);
+  min-height: 32px;
+}
+.sliderFeeling {
+  accent-color: var(--feeling);
+}
+
+/* ───── Modal ───── */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 24, 24, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: var(--s-6);
+}
+.modal {
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-modal);
+  width: min(560px, 100%);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+}
+.modalWide {
+  width: min(860px, 100%);
+}
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-5) var(--s-6) var(--s-3);
+}
+.modalTitle {
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  font-weight: 500;
+  flex: 1;
+}
+.modalBody {
+  padding: var(--s-2) var(--s-6) var(--s-5);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s-2);
+  padding: var(--s-4) var(--s-6);
+  border-top: 1px solid var(--line-soft);
+}
+
+/* ───── Toast ───── */
+.toasts {
+  position: fixed;
+  right: var(--s-6);
+  bottom: var(--s-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  z-index: 60;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 260px;
+  max-width: 420px;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-row);
+  background: var(--sidebar);
+  color: var(--on-dark);
+  box-shadow: var(--shadow-modal);
+  font-size: 0.93rem;
+}
+.toastError {
+  background: var(--danger);
+  color: #fff;
+}
+.toastAction {
+  background: none;
+  border: 0;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ───── Empty state ───── */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  text-align: center;
+  color: var(--muted);
+  padding: var(--s-6) var(--s-4);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-row);
+}
+.emptyIcon {
+  color: var(--progress);
+  opacity: 0.8;
+}
+
+/* ───── Progress ───── */
+.progressTrack {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line-soft);
+  overflow: hidden;
+}
+.progressFill {
+  height: 100%;
+  background: var(--progress);
+  border-radius: 999px;
+}
+.progressFeeling {
+  background: var(--feeling);
+}
+
+/* ───── Tabs ───── */
+.tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-input);
+  background: var(--line-soft);
+}
+.tab {
+  min-height: 30px;
+  padding: 0 var(--s-3);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.87rem;
+  font-weight: 600;
+}
+.tab[aria-selected='true'] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+/* ───── Tooltip ───── */
+.tooltipWrap {
+  position: relative;
+  display: inline-flex;
+}
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 280px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--sidebar);
+  color: var(--on-dark);
+  font-size: 0.83rem;
+  font-weight: 400;
+  line-height: 1.4;
+  z-index: 40;
+  pointer-events: none;
+}
+
+/* ───── Mood scale ───── */
+.mood {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--s-2);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.moodBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 56px;
+  padding: 6px 2px;
+  border-radius: var(--r-input);
+  border: 1px solid var(--input-border);
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+.moodBtn:hover {
+  border-color: var(--feeling);
+}
+.moodBtn[aria-checked='true'] {
+  background: var(--feeling-tint);
+  border-color: var(--feeling);
+  color: var(--feeling-deep);
+}
+[data-theme='dark'] .moodBtn[aria-checked='true'] {
+  color: var(--feeling);
+}
+.moodNum {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+.moodWord {
+  font-size: 0.75rem;
+}
+
+/* ───── Difficulty ───── */
+.diff {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--s-2);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.diffBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: 6px 2px;
+  border-radius: var(--r-input);
+  border: 1px solid var(--input-border);
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+}
+.diffBtn[aria-checked='true'] {
+  background: var(--progress-tint);
+  border-color: var(--progress);
+  color: var(--progress-deep);
+  font-weight: 600;
+}
+[data-theme='dark'] .diffBtn[aria-checked='true'] {
+  color: var(--progress);
+}
+
+/* ───── Timer ───── */
+.timer {
+  font-family: var(--font-mono);
+  font-size: 56px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.timerSm {
+  font-size: 0.93rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--r-chip);
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--progress-tint);
+  color: var(--progress-deep);
+  white-space: nowrap;
+}
+[data-theme='dark'] .badge {
+  color: var(--progress);
+}
+.badgeFeeling {
+  background: var(--feeling-tint);
+  color: var(--feeling-deep);
+}
+[data-theme='dark'] .badgeFeeling {
+  color: var(--feeling);
+}
+.badgeMuted {
+  background: var(--line-soft);
+  color: var(--muted);
+}

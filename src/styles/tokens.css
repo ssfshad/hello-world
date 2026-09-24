@@ -1,0 +1,94 @@
+/* Design tokens (frontend.md §3.1). teal = progress, orange = feelings. */
+:root {
+  /* Surfaces */
+  --bg: #f6f3ec; /* paper */
+  --surface: #ffffff;
+  --surface-warm: #fffdf8; /* diary cards */
+  --sidebar: #1f2a2b;
+  --sidebar-active: #33474a;
+
+  /* Text */
+  --ink: #1e1d1a;
+  --ink-soft: #3f3b34;
+  --muted: #5e5a52; /* min contrast 4.5:1 on --bg and --surface */
+  --on-dark: #e8e4da;
+  --on-dark-muted: #a9b3b0;
+
+  /* Lines */
+  --line: #e4dfd3;
+  --line-soft: #efebe2;
+  --input-border: #d8d2c4;
+
+  /* Progress (teal) */
+  --progress: #1f6f78;
+  --progress-deep: #174f55;
+  --progress-tint: #e3efee;
+
+  /* Feelings (orange) */
+  --feeling: #b2501a;
+  --feeling-deep: #8a3e14;
+  --feeling-tint: #fdf3e9;
+
+  /* Heatmap scale (0 → 4) */
+  --heat-0: #e9e4d8;
+  --heat-1: #bcd9d7;
+  --heat-2: #7fb5b6;
+  --heat-3: #3f878d;
+  --heat-4: #174f55;
+
+  /* Status */
+  --danger: #a3261b;
+  --danger-tint: #fbe9e6;
+
+  /* Type */
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Spacing scale */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 44px;
+
+  /* Radius */
+  --r-input: 8px;
+  --r-row: 10px;
+  --r-card: 14px;
+  --r-chip: 999px;
+
+  --shadow-modal: 0 18px 48px rgba(20, 24, 24, 0.22);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--progress) 45%, transparent);
+  --base-size: 15px;
+}
+
+[data-theme='dark'] {
+  --bg: #151b1c;
+  --surface: #1e2627;
+  --surface-warm: #222a2a;
+  --ink: #edeae3;
+  --ink-soft: #d3cfc6;
+  --muted: #a5aca9;
+  --line: #2f3a3b;
+  --line-soft: #283233;
+  --input-border: #3c4849;
+  --progress: #5fb3b9;
+  --progress-tint: #1f3b3e;
+  --feeling: #e08a55;
+  --feeling-tint: #3a2a20;
+  --danger: #ef8a7c;
+  --danger-tint: #3a2220;
+  --heat-0: #263031;
+  --shadow-modal: 0 18px 48px rgba(0, 0, 0, 0.5);
+}
+
+[data-font-size='s'] {
+  --base-size: 14px;
+}
+[data-font-size='l'] {
+  --base-size: 17px;
+}

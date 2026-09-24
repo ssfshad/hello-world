@@ -1,0 +1,21 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Main window: app commands plus the plugins Hello World uses.",
+  "windows": ["main"],
+  "permissions": [
+    "default",
+    "core:default",
+    "core:window:allow-set-focus",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "dialog:allow-message",
+    "dialog:allow-ask",
+    "dialog:allow-confirm",
+    "opener:allow-open-url",
+    "notification:default",
+    "updater:default",
+    "process:allow-restart",
+    "window-state:default"
+  ]
+}
