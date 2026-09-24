@@ -16,9 +16,11 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: src-tauri }
       - run: npm ci
-      # Signed updater artifacts. Add the TAURI_SIGNING_PRIVATE_KEY (+ _PASSWORD)
-      # repository secrets. Configure Windows code signing before a public release.
+      # Signed updater artifacts use the TAURI_SIGNING_PRIVATE_KEY secret
+      # (+ _PASSWORD if the key has one). Windows code signing is not set up yet.
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -27,5 +29,14 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: Hello World v__VERSION__
+          releaseBody: |
+            **Hello World — a journal for new coders.** Log what you learned, practise it, and see your progress. Everything stays on your device.
+
+            ### Install (Windows 10/11)
+            1. Download **`Hello World_x.y.z_x64-setup.exe`** below (the `.msi` works too).
+            2. Run it. Windows may show *"Windows protected your PC"* because the installer isn't code-signed yet. Click **More info → Run anyway**.
+            3. Open **Hello World** from the Start menu.
+
+            Your data is stored in `%APPDATA%\app.helloworld.journal`. The app checks this page for updates.
           releaseDraft: true
           includeUpdaterJson: true
