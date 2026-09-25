@@ -178,7 +178,7 @@ Build these once in `src/components/ui/` and reuse everywhere:
 |---|---|
 | `Ctrl/Cmd + Enter` | Start / pause session |
 | `Ctrl/Cmd + K` | Quick log (concept, problem or diary line from anywhere) |
-| `Ctrl/Cmd + 1…7` | Jump to sidebar pages |
+| `Ctrl/Cmd + 1…8` | Jump to sidebar pages (Today, Dashboard, Knowledge, Notebook, Practice, Insights, Library, Roadmaps) |
 | `Esc` | Close modal |
 
 ---
@@ -295,6 +295,47 @@ Layout: three columns (360 px / flexible / 340 px).
 - Nodes can be linked to concepts; when a linked concept is logged, the node moves to *Learning* automatically; the user marks *Done*.
 - Create/edit: add, rename, nest and reorder nodes (drag handle plus keyboard reordering).
 - Import from JSON file (our format) and from roadmap.sh content (see backend §10 for the import approach and attribution).
+
+### 5.8a Knowledge
+
+**Purpose:** everything the learner has learned, as their own cheat sheet.
+
+- Header action: **Review N due** starts a recall review.
+- **Concepts** tab: search, language filter, category chips; a grid of concept
+  cards (due for review first) with status *New / Learning / Due for review /
+  Solid*. A card opens its detail: note, example code beside its output,
+  problems that used it, related errors, and *Edit*, *Practice this*, *Review now*.
+- **Errors I fixed** tab: the error journal. Each entry shows the error, what
+  caused it, the fix, how often it was hit, and *Hit it again*.
+- **Glossary** tab: built-in and own terms. Terms are underlined wherever notes
+  and problem statements mention them; hover or focus shows the definition.
+
+**Recall review** (modal): only the concept name first, an optional scratch box
+(not saved), then *Show my note* (Space) reveals the note and example; rate
+*Forgot / Fuzzy / Got it* (1 / 2 / 3).
+
+**Example editor**: when pasted output contains an error, a card under the
+output either shows the fix from the error journal ("You've seen this error
+before") or offers *Log this error* with the error line prefilled.
+
+### 5.8b Weekly review (`/week`)
+
+Summary tiles, what was learned, "the hard part" (lowest-mood day and the
+comeback after it) and three questions: *What clicked? What's still fuzzy? One
+focus for next week.* The focus shows as a pill on Today the next week. Today
+shows a "Your week in review is ready" card from Friday to Tuesday until the
+review is saved or put off. Also reachable from Insights.
+
+### 5.8c Guidance for new and returning learners
+
+- **Getting started** (Today and Dashboard, first 14 days): six steps (session,
+  concept, example, problem, diary, practice) that tick off from real data.
+  Each step's button lands exactly where the action happens (scroll, highlight,
+  focus, or opens the right modal).
+- **Welcome back**: on an empty Today after 3+ days away, a kind card with the
+  last concepts and one easy way back in (a quick review or a session).
+- **I'm stuck**: on problems, copies a prompt asking for hints only.
+- **Mini project**: a Practice style; the "Watching vs doing" insight links to it.
 
 ### 5.9 Settings
 

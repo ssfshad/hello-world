@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Lock, Mail, MailOpen, PenLine } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { CalendarCheck, Lock, Mail, MailOpen, PenLine } from 'lucide-react';
 import { PageHeader } from '@/app/PageHeader';
 import { Button, Card, EmptyState, Modal, Tabs, TextArea, TextField, toast } from '@/components/ui';
 import {
@@ -29,6 +30,7 @@ import s from '../pages.module.css';
 
 export default function InsightsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { data: app } = useAppState();
   const today = app?.today ?? '';
   const [range, setRange] = useState<'30' | '90' | 'all'>('30');
@@ -44,7 +46,15 @@ export default function InsightsPage() {
 
   return (
     <>
-      <PageHeader context={t('insights.context')} title={t('insights.title')} />
+      <PageHeader
+        context={t('insights.context')}
+        title={t('insights.title')}
+        actions={
+          <Button icon={<CalendarCheck size={16} />} onClick={() => navigate('/week')}>
+            {t('insights.weeklyReview')}
+          </Button>
+        }
+      />
       <div className={s.insightsGrid}>
         <div className="stack" style={{ gap: 20 }}>
           <MoodUsefulnessChart

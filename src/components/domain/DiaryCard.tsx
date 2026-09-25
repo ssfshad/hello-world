@@ -63,7 +63,7 @@ export function DiaryCard({
   const status = save.isPending ? t('today.draftSaving') : draft && !draft.dirty ? t('today.draftSaved') : '';
 
   return (
-    <Card tone="warm" headline={t('today.diaryTitle')} actions={<span className={s.saveState} aria-live="polite">{status}</span>}>
+    <Card tone="warm" id="diary-card" headline={t('today.diaryTitle')} actions={<span className={s.saveState} aria-live="polite">{status}</span>}>
       <div className="stack" style={{ gap: 16 }}>
         <TextArea
           label={t('today.diaryTitle')}

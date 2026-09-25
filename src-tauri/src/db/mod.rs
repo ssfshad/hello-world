@@ -15,6 +15,7 @@ static MIGRATION_SQL: &[&str] = &[
     include_str!("../../migrations/0001_initial.sql"),
     include_str!("../../migrations/0002_open_on_dashboard.sql"),
     include_str!("../../migrations/0003_concept_examples.sql"),
+    include_str!("../../migrations/0004_learning_tools.sql"),
 ];
 
 static MIGRATIONS: LazyLock<Migrations<'static>> =

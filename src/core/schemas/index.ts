@@ -84,7 +84,7 @@ export const practiceConfigSchema = z.object({
   concept_ids: z.array(z.string()).min(1),
   difficulty: z.number().int().min(1).max(5),
   count: z.number().int().min(1).max(10),
-  style: z.enum(['beginner', 'story', 'cf']),
+  style: z.enum(['beginner', 'story', 'cf', 'project']),
   include_struggles: z.boolean(),
   provider_id: z.string().nullable().optional(),
 });

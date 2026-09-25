@@ -7,10 +7,19 @@ interface UiState {
   lastPage: string;
   coachMarkSeen: boolean;
   quickLogOpen: boolean;
+  /** the getting-started guide was hidden by the learner */
+  guideHidden: boolean;
+  /** day_key the welcome-back card was dismissed on */
+  welcomeDismissed: string | null;
+  /** week_start whose "week in review" card was put off */
+  weekCardDismissed: string | null;
   setSidebarCollapsed: (v: boolean | null) => void;
   setLastPage: (p: string) => void;
   setCoachMarkSeen: () => void;
   setQuickLogOpen: (v: boolean) => void;
+  setGuideHidden: (v: boolean) => void;
+  setWelcomeDismissed: (day: string) => void;
+  setWeekCardDismissed: (week: string) => void;
 }
 
 function safeStorage() {
@@ -36,10 +45,16 @@ export const useUiStore = create<UiState>()(
       lastPage: '/today',
       coachMarkSeen: false,
       quickLogOpen: false,
+      guideHidden: false,
+      welcomeDismissed: null,
+      weekCardDismissed: null,
       setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
       setLastPage: (p) => set({ lastPage: p }),
       setCoachMarkSeen: () => set({ coachMarkSeen: true }),
       setQuickLogOpen: (v) => set({ quickLogOpen: v }),
+      setGuideHidden: (v) => set({ guideHidden: v }),
+      setWelcomeDismissed: (day) => set({ welcomeDismissed: day }),
+      setWeekCardDismissed: (week) => set({ weekCardDismissed: week }),
     }),
     {
       name: 'hello-world-ui',
@@ -48,6 +63,9 @@ export const useUiStore = create<UiState>()(
         sidebarCollapsed: s.sidebarCollapsed,
         lastPage: s.lastPage,
         coachMarkSeen: s.coachMarkSeen,
+        guideHidden: s.guideHidden,
+        welcomeDismissed: s.welcomeDismissed,
+        weekCardDismissed: s.weekCardDismissed,
       }),
     },
   ),

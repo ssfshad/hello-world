@@ -8,13 +8,16 @@ use crate::error::{AppError, AppResult};
 use crate::services::concepts::{self, Concept, ConceptCategory, ConceptInput, ConceptUpdate, DayRange};
 use crate::services::day::{self, DaySummary, DayView};
 use crate::services::diary::{self, DiaryEntry, DiarySaveInput, FeelingTag};
+use crate::services::errors::{self, ErrorNote, ErrorNoteInput};
+use crate::services::glossary::{self, GlossaryInput, GlossaryTerm};
 use crate::services::insights::{self, Insight, InsightRulePref, Trigger};
 use crate::services::letters::{self, Letter};
 use crate::services::problems::{self, Problem, ProblemFilter, ProblemInput, ProblemUpdate};
 use crate::services::review::{self, ReviewItem};
 use crate::services::score::{UsefulnessBreakdown, UsefulnessComparison};
 use crate::services::search::{self, SearchFilters, SearchHit};
-use crate::services::stats::{self, DailyPoint, HeatCell, InsightCharts, SeriesPoint, StatsOverview};
+use crate::services::stats::{self, DailyPoint, GettingStarted, HeatCell, InsightCharts, SeriesPoint, StatsOverview};
+use crate::services::weekly::{self, WeekFocus, WeekReview, WeekReviewInput};
 use crate::services::profile;
 use crate::state::AppState;
 
@@ -293,4 +296,63 @@ pub async fn letter_list(state: State<'_, AppState>) -> AppResult<Vec<Letter>> {
 pub async fn letter_open(state: State<'_, AppState>, id: String) -> AppResult<Letter> {
     let now = Utc::now();
     state.write(|c| letters::open(c, &id, &profile::today(c, now)?, now))
+}
+
+// ───────────────────────── Error journal / glossary ─────────────────────────
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn error_note_list(state: State<'_, AppState>, language_id: Option<String>) -> AppResult<Vec<ErrorNote>> {
+    state.read(|c| errors::list(c, language_id.as_deref()))
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn error_note_save(state: State<'_, AppState>, input: ErrorNoteInput) -> AppResult<ErrorNote> {
+    state.write(|c| errors::save(c, input, Utc::now()))
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn error_note_hit(state: State<'_, AppState>, id: String) -> AppResult<ErrorNote> {
+    state.write(|c| errors::hit(c, &id, Utc::now()))
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn error_note_delete(state: State<'_, AppState>, id: String) -> AppResult<()> {
+    state.write(|c| errors::delete(c, &id, Utc::now()))
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn glossary_list(state: State<'_, AppState>) -> AppResult<Vec<GlossaryTerm>> {
+    state.read(glossary::list)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn glossary_save(state: State<'_, AppState>, input: GlossaryInput) -> AppResult<GlossaryTerm> {
+    state.write(|c| glossary::save(c, input, Utc::now()))
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn glossary_delete(state: State<'_, AppState>, id: String) -> AppResult<()> {
+    state.write(|c| glossary::delete(c, &id, Utc::now()))
+}
+
+// ───────────────────────── Weekly review / guide ─────────────────────────
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn week_review_get(state: State<'_, AppState>, week_start: Option<String>) -> AppResult<WeekReview> {
+    state.read(|c| weekly::get(c, week_start.as_deref(), Utc::now()))
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn week_review_save(state: State<'_, AppState>, input: WeekReviewInput) -> AppResult<WeekReview> {
+    state.write(|c| weekly::save(c, input, Utc::now()))
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn week_focus(state: State<'_, AppState>) -> AppResult<Option<WeekFocus>> {
+    state.read(|c| weekly::current_focus(c, Utc::now()))
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn getting_started(state: State<'_, AppState>) -> AppResult<GettingStarted> {
+    state.read(stats::getting_started)
 }

@@ -69,14 +69,17 @@ feelings.
 
 | | |
 |---|---|
-| 🧠 **What I learned** | Each concept gets a **note** in your own words, a **code canvas** (line numbers, Tab to indent) for an example, and an **output** box for what your compiler printed. |
+| 🧠 **What I learned** | Each concept gets a **note** in your own words and an **example**: a full-size editor with your code on the left and the output your compiler printed on the right. |
+| 🎓 **Knowledge** | Every concept as your own cheat sheet, an **error journal** ("you've seen this error before, here's how you fixed it") and a **glossary** that underlines tricky words in your notes. |
+| 🧭 **Getting started** | A first-weeks checklist whose buttons take you straight to each step. After 3+ days away, a kind *welcome back* instead of a broken streak. |
 | ⏱️ **Session & problem timers** | Pause, resume, crash recovery. Late-night sessions count toward the previous day. |
 | 🙂 **Mood check-ins** | Before and after every session, on a 1–5 scale from *Drained* to *Fired up*. |
 | 📓 **Diary** | Feeling tags, with automatic links to the concepts you wrote about. |
 | 📊 **Usefulness score** | A calculated score next to your own rating; time alone never makes a perfect day. |
-| 📈 **Dashboard** | Streaks, heatmap, mood vs usefulness, and solved problems split into **alone · with help**. |
-| 🔁 **Spaced review** | Concepts come back at 1 → 3 → 7 → 14 → 30 → 60 days. |
-| 🤖 **Practice generator** | Copy-prompt mode (free), or Ollama / OpenAI-compatible / Gemini / Anthropic / OpenRouter. |
+| 📈 **Dashboard** | Streaks (one missed day a week is a free **rest day**), heatmap, mood vs usefulness, and solved problems split into **alone · with help**. |
+| 🔁 **Recall review** | Concepts come back at 1 → 3 → 7 → 14 → 30 → 60 days. Remember first, then reveal your own note and rate *Forgot / Fuzzy / Got it*. |
+| 🗓️ **Weekly review** | A two-minute look back drafted from your log, plus one focus for next week that stays on Today. |
+| 🤖 **Practice generator** | Copy-prompt mode (free), or Ollama / OpenAI-compatible / Gemini / Anthropic / OpenRouter. Includes **mini projects**, and an **I'm stuck** button that copies a hints-only prompt (never the answer). |
 | 💬 **Insights** | *"You've been here before"*, comeback stories, a warning when you only watch tutorials, milestones. |
 | 📚 **Library & roadmaps** | Your links, notes and files; roadmaps you build yourself or import. |
 | ✉️ **Letters to future you** | Sealed until the day you choose. |

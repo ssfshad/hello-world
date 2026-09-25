@@ -2,8 +2,10 @@ import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import type { Concept, ConceptCategory } from '@/core/types/api';
-import { Button, Chip, ChipGroup, CodeCanvas, Select, TextArea, TextField, uiStyles } from '@/components/ui';
+import { Button, Chip, ChipGroup, Select, TextArea, TextField, uiStyles } from '@/components/ui';
 import { conceptNameSchema } from '@/core/schemas';
+import { ExampleField } from './ExampleEditor';
+import { GlossaryText } from './GlossaryText';
 import s from './domain.module.css';
 
 export interface NewConcept {
@@ -190,23 +192,12 @@ export function ConceptInput({
             style={{ minHeight: 64 }}
             autoFocus
           />
-          <CodeCanvas
-            label={t('today.codeLabel')}
-            hint={t('today.codeHint')}
-            placeholder={t('today.codePlaceholder')}
-            value={code}
-            onChange={setCode}
-            maxLength={20000}
-          />
-          <CodeCanvas
-            variant="output"
-            label={t('today.outputLabel')}
-            hint={t('today.outputHint')}
-            placeholder={t('today.outputPlaceholder')}
-            value={output}
-            onChange={setOutput}
-            maxLength={20000}
-            minRows={3}
+          <ExampleField
+            name={name}
+            code={code}
+            output={output}
+            onCodeChange={setCode}
+            onOutputChange={setOutput}
           />
           <ChipGroup label={t('today.categoryLabel')}>
             {categories.map((c) => (
@@ -267,7 +258,11 @@ export function ConceptList({ concepts, onEdit }: { concepts: Concept[]; onEdit?
               </Button>
             )}
           </div>
-          {c.note && <p className={s.conceptNote}>{c.note}</p>}
+          {c.note && (
+            <p className={s.conceptNote}>
+              <GlossaryText text={c.note} />
+            </p>
+          )}
           <ConceptExample concept={c} />
         </li>
       ))}

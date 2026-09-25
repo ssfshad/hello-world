@@ -99,6 +99,21 @@ a {
   flex: 1;
 }
 
+/* Guide steps point at the exact place to act: a short glow, then it fades. */
+.spotlight {
+  animation: spotlight 1.6s ease-out 1;
+  border-radius: var(--r-card);
+}
+@keyframes spotlight {
+  0%,
+  35% {
+    box-shadow: 0 0 0 4px var(--progress), 0 0 0 10px var(--progress-tint);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

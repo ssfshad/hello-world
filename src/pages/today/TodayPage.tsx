@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Lightbulb, Plus, X } from 'lucide-react';
 import { PageHeader } from '@/app/PageHeader';
 import { Button, Card, EmptyState, IconButton, MoodScale, toast } from '@/components/ui';
@@ -13,6 +13,9 @@ import { UsefulnessCard } from '@/components/domain/UsefulnessCard';
 import { InsightCard } from '@/components/domain/InsightCard';
 import { useProblemDetail } from '@/components/domain/useProblemDetail';
 import { ConceptEditModal } from '@/components/domain/ConceptEditModal';
+import { GettingStarted, type GuideStep } from '@/components/domain/GettingStarted';
+import { RecallReview } from '@/components/domain/RecallReview';
+import { FocusPill, WeekReviewCard, WelcomeBack } from '@/components/domain/TodayCards';
 import {
   useAppState,
   useCategories,
@@ -21,17 +24,21 @@ import {
   useDay,
   useDayClose,
   useFeelingTags,
+  useGettingStarted,
   useInsights,
   useMoodCheckin,
   useProblemMutations,
   useResources,
   useReviewDue,
   useSelfUsefulness,
+  useStatsOverview,
   useTimerActions,
 } from '@/data/queries';
 import { useUiStore } from '@/stores/uiStore';
 import { formatDay, formatDuration } from '@/lib/format';
-import type { Concept, Insight, Problem } from '@/core/types/api';
+import { daysBetween } from '@/lib/day';
+import { spotlight } from '@/lib/spotlight';
+import type { Concept, Insight, Problem, ReviewItem } from '@/core/types/api';
 import type { NewConcept } from '@/components/domain/ConceptInput';
 import s from '../pages.module.css';
 
@@ -56,10 +63,16 @@ export default function TodayPage() {
   const detail = useProblemDetail();
   const coachSeen = useUiStore((st) => st.coachMarkSeen);
   const setCoachSeen = useUiStore((st) => st.setCoachMarkSeen);
+  const guideHidden = useUiStore((st) => st.guideHidden);
+  const welcomeDismissed = useUiStore((st) => st.welcomeDismissed);
+  const { data: guide } = useGettingStarted();
+  const { data: overview } = useStatsOverview(null);
+  const [params, setParams] = useSearchParams();
 
   const [problemModal, setProblemModal] = useState<{ open: boolean; edit: Problem | null }>({ open: false, edit: null });
   const [lowMood, setLowMood] = useState<Insight | null>(null);
-  const [editConcept, setEditConcept] = useState<Concept | null>(null);
+  const [editConcept, setEditConcept] = useState<{ concept: Concept; example?: boolean } | null>(null);
+  const [recall, setRecall] = useState<ReviewItem[] | null>(null);
 
   const languages = app?.languages ?? [];
   const primary = languages.find((l) => l.is_primary) ?? languages[0];
@@ -74,9 +87,51 @@ export default function TodayPage() {
     };
   }, [allConcepts, primary]);
 
+  /** Guide steps and "Show me" buttons land exactly where the action happens. */
+  const goTo = useCallback(
+    (step: GuideStep) => {
+      switch (step) {
+        case 'session':
+          spotlight('timer-card', 'button:not([disabled])');
+          break;
+        case 'concept':
+          spotlight('concept-input', 'input');
+          break;
+        case 'example': {
+          const latest = day?.concepts[0] ?? allConcepts[0];
+          if (latest) setEditConcept({ concept: latest, example: true });
+          else spotlight('concept-input', 'input');
+          break;
+        }
+        case 'problem':
+          setProblemModal({ open: true, edit: null });
+          break;
+        case 'diary':
+          spotlight('diary-card', 'textarea');
+          break;
+        case 'practice':
+          navigate('/practice');
+          break;
+      }
+    },
+    [day, allConcepts, navigate],
+  );
+
+  // Other pages (the Dashboard's guide) link here with ?do=<step>.
+  const pending = params.get('do') as GuideStep | null;
+  useEffect(() => {
+    if (!pending || !day) return;
+    setParams({}, { replace: true });
+    // Let the page paint before scrolling to the target.
+    requestAnimationFrame(() => goTo(pending));
+  }, [pending, day, goTo, setParams]);
+
   if (!app || !day) return null;
 
   const empty = day.sessions.length === 0 && day.concepts.length === 0 && day.problems.length === 0 && !day.diary && day.moods.length === 0;
+  const daysAway = overview?.last_active_day ? daysBetween(overview.last_active_day, dayKey) : 0;
+  const showWelcome = empty && daysAway >= 3 && welcomeDismissed !== dayKey;
+  const guideOpen = !!guide && !guideHidden && app.journey_day <= 14 && !Object.values(guide).every(Boolean);
   const latestAdhoc = [...day.moods].reverse()[0]?.value ?? null;
   const before = day.moods.find((m) => m.kind === 'session_start')?.value;
   const after = [...day.moods].reverse().find((m) => m.kind === 'session_end')?.value;
@@ -142,16 +197,32 @@ export default function TodayPage() {
         }
       />
 
-      {empty && (
+      <div className={s.topRow}>
+        <FocusPill />
+      </div>
+
+      {showWelcome ? (
+        <WelcomeBack
+          name={app.profile?.display_name ?? ''}
+          daysAway={daysAway}
+          today={dayKey}
+          recent={allConcepts.slice(0, 3)}
+          canReview={review.length > 0}
+          onReview={() => setRecall(review)}
+          onStart={() => goTo('session')}
+        />
+      ) : (
+        <GettingStarted onAction={goTo} />
+      )}
+
+      <WeekReviewCard today={dayKey} />
+
+      {empty && !showWelcome && !guideOpen && (
         <div className={s.banner}>
           <Lightbulb size={20} aria-hidden="true" color="var(--progress)" />
           <span>{t('today.empty')}</span>
           {review[0] && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(`/practice?concept=${review[0].concept_id}`)}
-            >
+            <Button variant="ghost" size="sm" onClick={() => setRecall(review)}>
               {t('today.reviewSuggestion', { concept: review[0].concept_name, days: review[0].days_since_learned })}
             </Button>
           )}
@@ -169,7 +240,7 @@ export default function TodayPage() {
 
       <div className={s.todayGrid}>
         <div className={s.col}>
-          {!coachSeen && (
+          {!coachSeen && !guideOpen && !guide?.has_session && (
             <div className={s.coach} role="note">
               <span style={{ flex: 1 }}>{t('onboarding.coachMark')}</span>
               <IconButton aria-label={t('common.close')} onClick={setCoachSeen}>
@@ -208,15 +279,17 @@ export default function TodayPage() {
         <div className={s.col}>
           <Card title={t('today.learnedTitle')}>
             <div className="stack" style={{ gap: 16 }}>
-              <ConceptInput
-                search={search}
-                categories={categories}
-                resources={resources.map((r) => ({ id: r.id, title: r.title }))}
-                onAdd={addConcept}
-                onPickExisting={(c) => toast.info(t('errors.duplicateConcept', { name: c.name }))}
-                busy={conceptM.add.isPending}
-              />
-              <ConceptList concepts={day.concepts} onEdit={setEditConcept} />
+              <div id="concept-input">
+                <ConceptInput
+                  search={search}
+                  categories={categories}
+                  resources={resources.map((r) => ({ id: r.id, title: r.title }))}
+                  onAdd={addConcept}
+                  onPickExisting={(c) => toast.info(t('errors.duplicateConcept', { name: c.name }))}
+                  busy={conceptM.add.isPending}
+                />
+              </div>
+              <ConceptList concepts={day.concepts} onEdit={(c) => setEditConcept({ concept: c })} />
             </div>
           </Card>
 
@@ -309,7 +382,14 @@ export default function TodayPage() {
         }}
       />
 
-      {editConcept && <ConceptEditModal concept={editConcept} onClose={() => setEditConcept(null)} />}
+      {editConcept && (
+        <ConceptEditModal
+          concept={editConcept.concept}
+          openExample={editConcept.example}
+          onClose={() => setEditConcept(null)}
+        />
+      )}
+      {recall && <RecallReview items={recall} onClose={() => setRecall(null)} />}
       {detail.element}
       <StaleSessionModal />
     </>

@@ -367,6 +367,43 @@ CREATE TABLE settings (
   value  TEXT NOT NULL                   -- JSON
 );
 -- e.g. theme, allow_diary_to_ai (default false), reminder_time, open_on
+
+-- Learning tools (migration 0004)
+CREATE TABLE error_notes (               -- error journal
+  id          TEXT PRIMARY KEY,
+  language_id TEXT REFERENCES languages(id),
+  message     TEXT NOT NULL,             -- the error as printed
+  cause       TEXT,
+  fix         TEXT,
+  concept_id  TEXT REFERENCES concepts(id),
+  problem_id  TEXT REFERENCES problems(id),
+  hits        INTEGER NOT NULL DEFAULT 1,  -- "same error again" bumps it
+  last_hit_at TEXT NOT NULL,
+  day_key     TEXT NOT NULL,
+  deleted_at  TEXT,
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE glossary_terms (            -- seeded with ~30 language-neutral terms
+  id          TEXT PRIMARY KEY,
+  term        TEXT NOT NULL,
+  definition  TEXT NOT NULL,
+  language_id TEXT REFERENCES languages(id),
+  is_builtin  INTEGER NOT NULL DEFAULT 0,  -- editing a built-in makes it the learner's own
+  deleted_at  TEXT,
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);
+
+CREATE TABLE weekly_reviews (
+  week_start  TEXT PRIMARY KEY,          -- Monday day_key
+  clicked     TEXT,
+  fuzzy       TEXT,
+  focus       TEXT,                      -- shown on Today the following week
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);
 ```
 
 ### Full-text search
@@ -378,7 +415,7 @@ CREATE VIRTUAL TABLE search_index USING fts5(
 );
 ```
 Kept in sync by the service layer on every insert/update of diary entries,
-concept notes, problem titles and resource titles.
+concept notes, problem titles, resource titles and error notes.
 
 ### Migrations
 
@@ -424,7 +461,11 @@ Errors return `{ code, message }` with codes like `VALIDATION`, `NOT_FOUND`,
 | Stats | `stats_overview(language_id?)`, `stats_series(metric, range, language_id?)`, `stats_heatmap(range)` |
 | Insights | `insights_evaluate(trigger)`, `insights_list`, `insight_dismiss`, `insight_rule_toggle` |
 | Review | `review_due(limit)`, `review_record(concept_id, result)` |
-| Practice | `practice_build_prompt(config)`, `practice_generate(config)` (API mode), `practice_import_response(set_id, raw_text)`, `practice_fixup_prompt(raw_text)` |
+| Practice | `practice_build_prompt(config)`, `practice_generate(config)` (API mode), `practice_import_response(set_id, raw_text)`, `practice_fixup_prompt(raw_text)`, `problem_hint_prompt(id)` |
+| Error journal | `error_note_list(language_id?)`, `error_note_save(input)`, `error_note_hit(id)`, `error_note_delete(id)` |
+| Glossary | `glossary_list`, `glossary_save(input)`, `glossary_delete(id)` |
+| Weekly review | `week_review_get(week_start?)`, `week_review_save(input)`, `week_focus` |
+| Guide | `getting_started` (which first steps the learner has done, from real data) |
 | AI | `ai_provider_list`, `ai_provider_save`, `ai_provider_set_key`, `ai_provider_test` |
 | Reports | `report_data(range, language_id?)`, `report_save_pdf(bytes, suggested_name)`, `report_markdown(range)` |
 | Library | `resource_add_link`, `resource_add_file(path)`, `resource_add_note`, `resource_update`, `resource_delete`, `resource_list(filter)`, `library_open_folder` |
@@ -742,6 +783,30 @@ Simple fixed-interval schedule; good enough for v0.3, replaceable later.
   `solved_with_help` → same stage, `gave_up` / `revisit` → stage −1 (min 0).
 - `review_due(limit)` returns items with `due_day_key <= today`, oldest first,
   preferring concepts with negative feeling tags.
+- Recall review (Knowledge page) records *Forgot* as `hard` (−1), *Fuzzy* as `ok`
+  (+1) and *Got it* as `easy` (+2).
+
+### 9.1 Streaks and rest days
+
+A streak counts consecutive logged days. One missed day per Monday–Sunday
+week is a **rest day**: it doesn't break the streak and doesn't add to it.
+Today not logged yet never breaks it, nor does a missed yesterday while today
+can still be logged. `stats_overview` returns `streak_rest_days` and
+`last_active_day` (drives the "welcome back" card after 3+ days away).
+
+### 9.2 Weekly review
+
+`week_review_get` summarises one Monday–Sunday week from the log (time, days
+logged, concepts, problems solved alone / with help, errors logged, the
+lowest-mood day and the next logged day after it). Without `week_start` it
+returns the week that's due: the current week from Friday, otherwise last week.
+
+### 9.3 Hint prompt
+
+`problem_hint_prompt` renders `prompts/problem_hint.v1.txt`: the problem, the
+learner's saved code, and the concepts they know, with rules that ask for three
+graded hints and forbid writing the solution. The reference solution is never
+included.
 
 ---
 
@@ -856,6 +921,7 @@ Simple fixed-interval schedule; good enough for v0.3, replaceable later.
 | **v0.4** | Stats series and heatmap, insight engine with rules in §7.2, report data + PDF save |
 | **v0.5** | Library storage, roadmaps + import, AI providers (Ollama, OpenAI-compatible, Gemini, Anthropic, OpenRouter), keychain |
 | **v1.0** | Letters, LLM-ready Markdown report, optional AI diary linking, diagnostics export, signed builds, auto-update |
+| **v1.1** | Error journal, glossary, weekly reviews, getting-started progress, rest-day streaks, hint prompt, mini-project style |
 | **v2.0** | Opt-in community sync of aggregate stats only (separate spec; requires a server, accounts, moderation and anti-cheat) |
 
 ---

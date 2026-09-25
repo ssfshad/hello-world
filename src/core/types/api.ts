@@ -405,8 +405,12 @@ export interface StatsOverview {
   avg_solve_seconds: number | null;
   current_streak: number;
   best_streak: number;
+  /** missed days forgiven inside the current streak (one per Monday–Sunday week) */
+  streak_rest_days: number;
   journey_day: number;
   days_logged: number;
+  /** last day before today with anything logged */
+  last_active_day: string | null;
 }
 
 export type SeriesMetric =
@@ -510,7 +514,7 @@ export interface ReviewItem {
 }
 
 // ───────────────────────── Practice / AI ─────────────────────────
-export type ProblemStyle = 'beginner' | 'story' | 'cf';
+export type ProblemStyle = 'beginner' | 'story' | 'cf' | 'project';
 export interface PracticeConfig {
   language_id: string;
   concept_ids: string[];
@@ -714,7 +718,7 @@ export interface Letter {
 }
 
 // ───────────────────────── Search ─────────────────────────
-export type SearchKind = 'diary' | 'concept' | 'problem' | 'resource';
+export type SearchKind = 'diary' | 'concept' | 'problem' | 'resource' | 'error';
 export interface SearchFilters {
   kinds?: SearchKind[] | null;
   from?: string | null;
@@ -759,6 +763,108 @@ export interface AppState {
   active: ActiveState;
   app_version: string;
   is_debug: boolean;
+}
+
+// ───────────────────────── Error journal / glossary ─────────────────────────
+export interface ErrorNote {
+  id: string;
+  language_id: string | null;
+  /** the error text as printed */
+  message: string;
+  cause: string | null;
+  fix: string | null;
+  concept_id: string | null;
+  concept_name: string | null;
+  problem_id: string | null;
+  problem_title: string | null;
+  /** times the learner hit this error (1 when logged) */
+  hits: number;
+  last_hit_at: string;
+  day_key: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ErrorNoteInput {
+  /** present when editing */
+  id?: string | null;
+  language_id?: string | null;
+  message: string;
+  cause?: string | null;
+  fix?: string | null;
+  concept_id?: string | null;
+  problem_id?: string | null;
+}
+
+export interface GlossaryTerm {
+  id: string;
+  term: string;
+  definition: string;
+  language_id: string | null;
+  /** shipped with the app; editing makes it the learner's own */
+  is_builtin: boolean;
+  updated_at: string;
+}
+
+export interface GlossaryInput {
+  id?: string | null;
+  term: string;
+  definition: string;
+  language_id?: string | null;
+}
+
+// ───────────────────────── Weekly review / guide ─────────────────────────
+export interface WeekDay {
+  day_key: string;
+  mood: number | null;
+  concepts: number;
+  solved: number;
+}
+
+export interface WeekReview {
+  /** Monday day_key */
+  week_start: string;
+  /** Sunday day_key */
+  week_end: string;
+  is_past: boolean;
+  focused_seconds: number;
+  days_logged: number;
+  concepts: { id: string; name: string }[];
+  solved_alone: number;
+  solved_with_help: number;
+  attempted: number;
+  errors_logged: number;
+  /** lowest-mood logged day (mood 3 or below) */
+  hardest_day: WeekDay | null;
+  /** next logged day after the hardest one */
+  after_hardest: WeekDay | null;
+  clicked: string | null;
+  fuzzy: string | null;
+  focus: string | null;
+  /** null until the learner saves the review */
+  saved_at: string | null;
+}
+
+export interface WeekReviewInput {
+  week_start: string;
+  clicked?: string | null;
+  fuzzy?: string | null;
+  focus?: string | null;
+}
+
+export interface WeekFocus {
+  week_start: string;
+  focus: string;
+}
+
+/** What a new learner has tried so far (drives the getting-started guide). */
+export interface GettingStarted {
+  has_session: boolean;
+  has_concept: boolean;
+  has_example: boolean;
+  has_problem: boolean;
+  has_diary: boolean;
+  has_practice: boolean;
 }
 
 // ───────────────────────── Command map ─────────────────────────
@@ -851,6 +957,8 @@ export interface Commands {
   practice_import_response: [{ input: ImportInput }, ImportResult];
   practice_fixup_prompt: [{ raw_text: string }, string];
   practice_reliability: [Record<string, never>, ProviderReliability[]];
+  /** copy-prompt asking an AI for hints only (never the solution) */
+  problem_hint_prompt: [{ id: string }, string];
 
   ai_provider_list: [Record<string, never>, AiProvider[]];
   ai_provider_save: [{ input: AiProviderInput }, AiProvider];
@@ -894,6 +1002,21 @@ export interface Commands {
   letter_write: [{ body: string; open_after: string }, Letter];
   letter_list: [Record<string, never>, Letter[]];
   letter_open: [{ id: string }, Letter];
+
+  error_note_list: [{ language_id?: string | null }, ErrorNote[]];
+  error_note_save: [{ input: ErrorNoteInput }, ErrorNote];
+  /** "same error again": bumps hits */
+  error_note_hit: [{ id: string }, ErrorNote];
+  error_note_delete: [{ id: string }, null];
+  glossary_list: [Record<string, never>, GlossaryTerm[]];
+  glossary_save: [{ input: GlossaryInput }, GlossaryTerm];
+  glossary_delete: [{ id: string }, null];
+
+  /** week_start defaults to the week a review is due for (this week from Friday, else last week) */
+  week_review_get: [{ week_start?: string | null }, WeekReview];
+  week_review_save: [{ input: WeekReviewInput }, WeekReview];
+  week_focus: [Record<string, never>, WeekFocus | null];
+  getting_started: [Record<string, never>, GettingStarted];
 
   search: [{ query: string; filters: SearchFilters }, SearchHit[]];
 

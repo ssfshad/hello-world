@@ -21,6 +21,7 @@ pub const GENERATE_PROMPT: &str = include_str!("../../../prompts/generate_proble
 pub const FIXUP_PROMPT: &str = include_str!("../../../prompts/fixup_json.v1.txt");
 pub const REPORT_PREAMBLE: &str = include_str!("../../../prompts/llm_report_preamble.v1.txt");
 pub const DIARY_LINK_PROMPT: &str = include_str!("../../../prompts/diary_link.v1.txt");
+pub const HINT_PROMPT: &str = include_str!("../../../prompts/problem_hint.v1.txt");
 pub const PROMPT_VERSION: i64 = 1;
 
 /// Difficulty definitions sent inside every prompt (backend §8.3).
@@ -49,7 +50,12 @@ pub fn style_definition(style: &str) -> AppResult<&'static str> {
             "Codeforces-style: a short story, then precise Input and Output sections, an integer t of test cases \
              where it fits, and explicit constraints."
         }
-        _ => return Err(AppError::validation("style must be beginner, story or cf")),
+        "project" => {
+            "Mini project: a small, useful program a beginner can finish in under an hour (a tip calculator, \
+             a to-do list, a quiz, a number-guessing game). The statement says what to build and lists 3-5 \
+             small steps to build it in; samples show example runs; the reference solution is the whole program."
+        }
+        _ => return Err(AppError::validation("style must be beginner, story, cf or project")),
     })
 }
 
@@ -165,6 +171,59 @@ pub fn build_prompt(conn: &Connection, cfg: &PracticeConfig, now: DateTime<Utc>)
         ("json_shape_example", json_shape_example()),
     ];
     Ok(BuiltPrompt { prompt: template::render(GENERATE_PROMPT, &vars), prompt_version: PROMPT_VERSION, struggles })
+}
+
+/// A copy-prompt asking an AI for hints (never the solution) on a problem,
+/// explained with the concepts the learner already knows.
+pub fn hint_prompt(conn: &Connection, problem_id: &str, now: DateTime<Utc>) -> AppResult<String> {
+    let p = problems::get(conn, problem_id, now)?;
+    let today = profile::today(conn, now)?;
+    let language_id = match p.language_id.clone() {
+        Some(l) => l,
+        None => profile::primary_language_id(conn)?.ok_or_else(|| AppError::validation("Add a language first"))?,
+    };
+    let mut statement = vec![];
+    if let Some(s) = &p.statement {
+        for (key, label) in [
+            ("statement", ""),
+            ("input_format", "Input: "),
+            ("output_format", "Output: "),
+            ("constraints", "Constraints: "),
+        ] {
+            if let Some(v) = s.get(key).and_then(Value::as_str).map(str::trim).filter(|v| !v.is_empty()) {
+                statement.push(format!("{label}{v}"));
+            }
+        }
+        for (i, sample) in s.get("samples").and_then(Value::as_array).into_iter().flatten().enumerate() {
+            let get = |k: &str| sample.get(k).and_then(Value::as_str).unwrap_or("").trim_end().to_string();
+            statement.push(format!("Sample {} input:
+{}
+Sample {} output:
+{}", i + 1, get("input"), i + 1, get("output")));
+        }
+    }
+    let mut stmt = conn.prepare(
+        "SELECT name FROM concepts WHERE deleted_at IS NULL AND language_id = ?1
+          ORDER BY learned_day_key DESC, created_at DESC LIMIT 40",
+    )?;
+    let known: Vec<String> = stmt.query_map([&language_id], |r| r.get(0))?.collect::<Result<_, _>>()?;
+    let concepts = if known.is_empty() {
+        "- (none logged yet: assume only the very basics)".to_string()
+    } else {
+        known.iter().map(|n| format!("- {n}")).collect::<Vec<_>>().join("
+")
+    };
+    let vars = [
+        ("language", profile::language_name(conn, &language_id)?),
+        ("journey_day", profile::journey_day(conn, &today)?.to_string()),
+        ("title", p.title.clone()),
+        ("link", p.url.clone().unwrap_or_default()),
+        ("statement", statement.join("
+")),
+        ("attempt", p.solution_text.clone().unwrap_or_default()),
+        ("concepts", concepts),
+    ];
+    Ok(template::render(HINT_PROMPT, &vars))
 }
 
 pub fn fixup_prompt(raw_text: &str, selected: &[String], difficulty: Option<i64>) -> String {
@@ -386,6 +445,34 @@ mod tests {
         assert!(!p.prompt.contains("{{"));
         assert!(!p.prompt.contains("Recent struggles"), "no struggles yet → block removed");
         assert!(p.prompt.contains("\"reference_solution\""));
+    }
+
+    #[test]
+    fn hint_prompt_asks_for_hints_and_hides_the_answer() {
+        let (c, cfg, now) = setup();
+        let r = import(
+            &c,
+            ImportInput { config: cfg, raw_text: GOOD.into(), mode: "copy_prompt".into(), provider: None, model: None },
+            now,
+        )
+        .unwrap();
+        let p = hint_prompt(&c, &r.problems[0].id, now).unwrap();
+        assert!(p.contains("HINTS ONLY"));
+        assert!(p.contains("Sum a list") && p.contains("Add numbers."));
+        assert!(p.contains("Sample 1 input:
+2
+1 2"));
+        assert!(p.contains("- for loop") && p.contains("- lists"));
+        assert!(!p.contains("print(sum("), "reference solution must never be sent");
+        assert!(!p.contains("THEIR CODE SO FAR"), "no attempt yet");
+        assert!(!p.contains("{{"));
+    }
+
+    #[test]
+    fn project_style_is_accepted() {
+        let (c, cfg, now) = setup();
+        let p = build_prompt(&c, &PracticeConfig { style: "project".into(), ..cfg }, now).unwrap();
+        assert!(p.prompt.contains("Mini project"));
     }
 
     #[test]

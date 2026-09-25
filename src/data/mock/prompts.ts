@@ -19,6 +19,8 @@ export const STYLE_DEFS: Record<string, string> = {
   beginner: 'Beginner-clear: plain wording, one idea per sentence, no story.',
   story: 'Story-based: a short, friendly real-world scenario around the task.',
   cf: 'Codeforces-style: short story, precise input/output format, multiple test cases, explicit constraints.',
+  project:
+    'Mini project: a small, useful program a beginner can finish in under an hour. Say what to build and list 3-5 small steps; samples show example runs.',
 };
 
 export const JSON_SHAPE_EXAMPLE = `{
@@ -82,6 +84,42 @@ RULES
 OUTPUT
 Return ONLY valid JSON matching this shape, with no markdown and no extra text:
 ${JSON_SHAPE_EXAMPLE}
+`;
+}
+
+export interface HintVars {
+  language: string;
+  journey_day: number;
+  title: string;
+  link: string | null;
+  statement: string;
+  attempt: string | null;
+  concepts: string[];
+}
+
+/** Mirrors prompts/problem_hint.v1.txt: hints only, never the solution. */
+export function buildHintPrompt(v: HintVars): string {
+  const known = v.concepts.length
+    ? v.concepts.map((c) => `- ${c}`).join('\n')
+    : '- (none logged yet: assume only the very basics)';
+  return `You are a patient programming coach for a beginner learning ${v.language}.
+They are on day ${v.journey_day} of learning and are stuck on a problem.
+They asked for HINTS ONLY. They want to solve it themselves.
+
+PROBLEM
+${v.title}
+${v.link ? `Link: ${v.link}\n` : ''}${v.statement ? `${v.statement}\n` : ''}
+${v.attempt ? `THEIR CODE SO FAR\n${v.attempt}\n\n` : ''}CONCEPTS THEY KNOW (explain using only these, plus basic syntax):
+${known}
+
+RULES
+- Do NOT write the solution, and do NOT write corrected code.
+- Give 3 hints, numbered, from a gentle nudge to a more specific one. Tell
+  them to read one hint at a time and try again before reading the next.
+- If their code has a bug, point to where to look and ask a question that
+  helps them spot it. Don't fix it for them.
+- Suggest one small thing to print or test to check their thinking.
+- Use short sentences and a kind, encouraging tone.
 `;
 }
 

@@ -1,8 +1,22 @@
-import { render, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { render as rtlRender, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConceptInput } from '@/components/domain/ConceptInput';
+import { setInvoker } from '@/data/client';
+import { mockInvoke, resetMock } from '@/data/mock';
 import type { Concept } from '@/core/types/api';
 import { expectNoA11yViolations } from '../a11y';
+
+// The example editor looks up the error journal, so it needs a query client.
+const render = (ui: ReactElement) =>
+  rtlRender(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
+
+beforeEach(() => {
+  resetMock({ seeded: false });
+  setInvoker(mockInvoke);
+});
+afterEach(() => setInvoker(null));
 
 const concept = (name: string): Concept => ({
   id: name,
@@ -57,8 +71,13 @@ describe('Concept autocomplete', () => {
     );
     await user.type(screen.getByRole('combobox'), 'list slicing{Enter}');
     await user.type(screen.getByLabelText('Note — in my words'), 'take a piece of a list');
-    await user.type(screen.getByLabelText('Example code'), 'xs = [[1, 2, 3]{enter}print(xs[[1:])');
-    await user.type(screen.getByLabelText('Output'), '[[2, 3]');
+    await user.click(screen.getByRole('button', { name: 'Write example' }));
+    const editor = screen.getByRole('dialog', { name: 'Example: list slicing' });
+    await user.type(within(editor).getByLabelText('Example code'), 'xs = [[1, 2, 3]{enter}print(xs[[1:])');
+    await user.type(within(editor).getByLabelText('Output'), '[[2, 3]');
+    await user.click(within(editor).getByRole('button', { name: 'Done' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit example' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Lists' }));
     await expectNoA11yViolations(container);
     await user.click(screen.getByRole('button', { name: 'Save' }));

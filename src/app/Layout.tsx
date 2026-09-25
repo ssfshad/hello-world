@@ -1,37 +1,15 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  BarChart3,
-  BookOpen,
-  Code2,
-  Dumbbell,
-  HardDrive,
-  Library,
-  Lightbulb,
-  Map,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Settings,
-  Sun,
-} from 'lucide-react';
+import { Code2, HardDrive, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react';
 import { useTimerStore } from '@/stores/timerStore';
 import { useUiStore } from '@/stores/uiStore';
 import { IconButton, Timer } from '@/components/ui';
 import { useGlobalShortcuts } from './shortcuts';
 import { QuickLog } from './QuickLog';
 import { useBackgroundTasks } from './background';
+import { NAV } from './nav';
 import s from './layout.module.css';
-
-export const NAV = [
-  { to: '/today', key: 'today', icon: Sun },
-  { to: '/dashboard', key: 'dashboard', icon: BarChart3 },
-  { to: '/notebook', key: 'notebook', icon: BookOpen },
-  { to: '/practice', key: 'practice', icon: Dumbbell },
-  { to: '/insights', key: 'insights', icon: Lightbulb },
-  { to: '/library', key: 'library', icon: Library },
-  { to: '/roadmaps', key: 'roadmaps', icon: Map },
-] as const;
 
 function useNarrow(): boolean {
   const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1200);

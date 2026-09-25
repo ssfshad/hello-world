@@ -8,6 +8,8 @@ pub mod day;
 #[cfg(test)]
 pub mod fixtures;
 pub mod diary;
+pub mod errors;
+pub mod glossary;
 pub mod insights;
 pub mod letters;
 pub mod library;
@@ -24,6 +26,7 @@ pub mod sessions;
 pub mod settings;
 pub mod stats;
 pub mod util;
+pub mod weekly;
 
 use serde::{Deserialize, Deserializer};
 

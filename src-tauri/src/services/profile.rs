@@ -298,6 +298,12 @@ pub fn set_primary(conn: &Connection, id: &str, now: DateTime<Utc>) -> AppResult
     list_languages(conn)
 }
 
+/// Onboards a test learner (Python primary) for service tests in other modules.
+#[cfg(test)]
+pub fn onboard_for_tests(conn: &Connection) -> Profile {
+    tests::onboard(conn)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

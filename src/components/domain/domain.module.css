@@ -328,3 +328,330 @@
   border: 1px solid var(--line);
   border-radius: var(--r-row);
 }
+
+/* ───── Concept example: compact field + full-size editor ───── */
+.exampleField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.examplePreview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.examplePreview pre {
+  max-height: 7.5em;
+  overflow: hidden;
+}
+.examplePreview:hover pre,
+.examplePreview:focus-visible pre {
+  border-color: var(--progress);
+}
+.ide {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--s-4);
+}
+.idePane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-height: 0;
+}
+.ideBar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 32px;
+}
+.ideTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--r-input);
+  background: var(--line-soft);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+@media (max-width: 760px) {
+  .ide {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
+  }
+}
+
+/* ───── Glossary terms inside text ───── */
+.gloss {
+  position: relative;
+  border-bottom: 1.5px dotted var(--progress);
+  cursor: help;
+  border-radius: 2px;
+}
+.gloss:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.glossTip {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 6px);
+  left: 0;
+  width: max-content;
+  max-width: 280px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--sidebar);
+  color: var(--on-dark);
+  font-size: 0.83rem;
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: normal;
+  text-transform: none;
+  letter-spacing: normal;
+  box-shadow: var(--shadow-modal);
+  pointer-events: none;
+}
+
+/* ───── "You've seen this error before" under pasted output ───── */
+.assist {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--s-3);
+  border-radius: var(--r-row);
+  border: 1px solid var(--feeling);
+  background: var(--feeling-tint);
+  font-size: 0.9rem;
+}
+.assistHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--feeling-deep);
+}
+[data-theme='dark'] .assistHead {
+  color: var(--feeling);
+}
+.assistFix {
+  white-space: pre-wrap;
+  max-height: 7.5em;
+  overflow: auto;
+}
+
+/* ───── Recall review ───── */
+.recallCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--s-6) var(--s-4);
+  border-radius: var(--r-card);
+  background: var(--progress-tint);
+  text-align: center;
+}
+.recallName {
+  font-family: var(--font-serif);
+  font-size: 1.8rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.recallLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.recallNote {
+  font-size: 1.02rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.recallScratch {
+  padding: var(--s-2) var(--s-3);
+  border-left: 3px solid var(--line);
+  color: var(--ink-soft);
+  white-space: pre-wrap;
+}
+.recallExample {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--s-3);
+}
+.recallRate {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  flex-wrap: wrap;
+}
+.recallRate kbd,
+.recallRate + kbd {
+  opacity: 0.7;
+  font-size: 0.75rem;
+}
+.recallDone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  text-align: center;
+  padding: var(--s-4) 0;
+}
+@media (max-width: 700px) {
+  .recallExample {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ───── Getting started ───── */
+.guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  margin-bottom: var(--s-5);
+  border-radius: var(--r-card);
+  border: 1px solid var(--progress);
+  background: var(--surface);
+}
+.guideHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--progress);
+}
+.guideTitle {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+.guideSteps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--s-2);
+}
+.guideStep {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-row);
+  border: 1px solid var(--line-soft);
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+.guideNext {
+  border-color: var(--progress);
+  background: var(--progress-tint);
+}
+.guideDone {
+  color: var(--muted);
+}
+.guideDone strong {
+  font-weight: 500;
+  text-decoration: line-through;
+  text-decoration-color: var(--line);
+}
+.guideCheck {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--input-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.guideDone .guideCheck {
+  border-color: var(--progress);
+  background: var(--progress);
+  color: #fff;
+}
+.guideText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.9rem;
+}
+.guideText .muted {
+  font-size: 0.83rem;
+}
+
+/* ───── Welcome back / week in review / focus ───── */
+.welcome {
+  display: flex;
+  gap: var(--s-4);
+  align-items: flex-start;
+  padding: var(--s-5);
+  margin-bottom: var(--s-5);
+  border-radius: var(--r-card);
+  background: var(--feeling-tint);
+  border: 1px solid color-mix(in srgb, var(--feeling) 35%, transparent);
+}
+.welcomeIcon {
+  flex: none;
+  color: var(--feeling);
+  margin-top: 4px;
+}
+.welcomeTitle {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 500;
+}
+.weekCard {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-5);
+  border-radius: var(--r-card);
+  border: 1px solid var(--line);
+  background: var(--surface-warm);
+  flex-wrap: wrap;
+}
+.weekCardTitle {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.focusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--r-chip);
+  border: 1px solid var(--progress);
+  background: var(--progress-tint);
+  color: var(--progress-deep);
+  font: inherit;
+  font-size: 0.87rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+[data-theme='dark'] .focusPill {
+  color: var(--progress);
+}
+.focusPill:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

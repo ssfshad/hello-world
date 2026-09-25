@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { Concept, FeelingTag, Problem, ProblemStatus } from '@/core/types/api';
 import { problemFormSchema, type ProblemForm } from '@/core/schemas';
 import { Button, Chip, ChipGroup, DifficultyPicker, Modal, TextArea, TextField } from '@/components/ui';
+import { HintButton } from './HintButton';
 
 const STATUSES: ProblemStatus[] = ['solved', 'solved_with_help', 'gave_up', 'revisit', 'in_progress', 'queued'];
 
@@ -61,10 +62,12 @@ export function ProblemModal({
       footer={
         <>
           {onDelete && (
-            <Button variant="ghost" onClick={onDelete} style={{ marginRight: 'auto' }}>
+            <Button variant="ghost" onClick={onDelete}>
               {t('problem.delete')}
             </Button>
           )}
+          {initial && initial.status !== 'solved' && <HintButton problemId={initial.id} />}
+          <span className="spacer" />
           <Button variant="ghost" onClick={onClose}>
             {t('common.cancel')}
           </Button>

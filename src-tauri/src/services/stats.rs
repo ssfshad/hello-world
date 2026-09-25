@@ -352,35 +352,49 @@ pub fn heatmap(conn: &Connection, range: &DayRange, now: DateTime<Utc>) -> AppRe
         .collect())
 }
 
-/// Current and best streak. A day counts when its score is > 0 (anything logged).
-/// Today not being logged yet doesn't break the current streak.
-pub fn streaks(active_days: &[String], today: &str) -> AppResult<(i64, i64)> {
+/// A streak: consecutive logged days, where one missed day per Monday–Sunday
+/// week counts as a rest day instead of breaking it. Rest days don't add to
+/// the count. Today not being logged yet doesn't break the current streak,
+/// and neither does a missed yesterday while today can still be logged.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Streaks {
+    pub current: i64,
+    pub best: i64,
+    /// Rest days inside the current streak.
+    pub rest_days: i64,
+}
+
+pub fn streaks(active_days: &[String], today: &str) -> AppResult<Streaks> {
     let set: std::collections::HashSet<&str> = active_days.iter().map(String::as_str).collect();
-    let mut best = 0;
-    let mut run = 0;
-    let mut prev: Option<chrono::NaiveDate> = None;
-    let mut sorted: Vec<&String> = active_days.iter().collect();
-    sorted.sort();
-    for d in sorted {
-        let day = time::parse_day(d)?;
-        run = match prev {
-            Some(p) if day - p == Duration::days(1) => run + 1,
-            Some(p) if day == p => run,
-            _ => 1,
-        };
+    let Some(first) = active_days.iter().min() else {
+        return Ok(Streaks { current: 0, best: 0, rest_days: 0 });
+    };
+    let today_d = time::parse_day(today)?;
+    let mut day = time::parse_day(first)?;
+    let (mut run, mut best, mut rests) = (0, 0, 0);
+    let mut rest_weeks: std::collections::HashSet<chrono::NaiveDate> = Default::default();
+    while day <= today_d {
+        let next = day + Duration::days(1);
+        if set.contains(time::fmt_day(day).as_str()) {
+            run += 1;
+        } else if day == today_d {
+            // Still time to log today.
+        } else {
+            let monday = day - Duration::days(day.weekday().num_days_from_monday() as i64);
+            let next_ok = set.contains(time::fmt_day(next).as_str()) || next == today_d;
+            if run > 0 && next_ok && !rest_weeks.contains(&monday) {
+                rest_weeks.insert(monday);
+                rests += 1;
+            } else {
+                run = 0;
+                rests = 0;
+                rest_weeks.clear();
+            }
+        }
         best = best.max(run);
-        prev = Some(day);
+        day = next;
     }
-    let mut current = 0;
-    let mut cursor = time::parse_day(today)?;
-    if !set.contains(today) {
-        cursor -= Duration::days(1);
-    }
-    while set.contains(time::fmt_day(cursor).as_str()) {
-        current += 1;
-        cursor -= Duration::days(1);
-    }
-    Ok((current, best))
+    Ok(Streaks { current: run, best, rest_days: rests })
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -396,8 +410,12 @@ pub struct StatsOverview {
     pub avg_solve_seconds: Option<f64>,
     pub current_streak: i64,
     pub best_streak: i64,
+    /// Rest days (forgiven missed days) inside the current streak.
+    pub streak_rest_days: i64,
     pub journey_day: i64,
     pub days_logged: i64,
+    /// The last day before today with anything logged.
+    pub last_active_day: Option<String>,
 }
 
 fn first_day(conn: &Connection, today: &str) -> AppResult<String> {
@@ -475,7 +493,8 @@ pub fn overview(conn: &Connection, language_id: Option<&str>, now: DateTime<Utc>
             active.push(d.clone());
         }
     }
-    let (current, best) = streaks(&active, &today)?;
+    let st = streaks(&active, &today)?;
+    let last_active_day = active.iter().filter(|d| d.as_str() < today.as_str()).max().cloned();
     let concepts_total: i64 = conn.query_row(
         "SELECT COUNT(*) FROM concepts WHERE deleted_at IS NULL AND (?1 IS NULL OR language_id = ?1)",
         [language_id],
@@ -513,10 +532,36 @@ pub fn overview(conn: &Connection, language_id: Option<&str>, now: DateTime<Utc>
         problems_solved_alone: alone,
         problems_solved_with_help: with_help,
         avg_solve_seconds: avg_solve,
-        current_streak: current,
-        best_streak: best,
+        current_streak: st.current,
+        best_streak: st.best,
+        streak_rest_days: st.rest_days,
         journey_day: profile::journey_day(conn, &today)?,
         days_logged: active.len() as i64,
+        last_active_day,
+    })
+}
+
+/// What a new learner has tried so far, for the getting-started guide.
+#[derive(Debug, Clone, Serialize)]
+pub struct GettingStarted {
+    pub has_session: bool,
+    pub has_concept: bool,
+    pub has_example: bool,
+    pub has_problem: bool,
+    pub has_diary: bool,
+    pub has_practice: bool,
+}
+
+pub fn getting_started(conn: &Connection) -> AppResult<GettingStarted> {
+    let any = |sql: &str| -> AppResult<bool> { Ok(conn.query_row(&format!("SELECT EXISTS({sql})"), [], |r| r.get(0))?) };
+    Ok(GettingStarted {
+        has_session: any("SELECT 1 FROM sessions WHERE deleted_at IS NULL")?,
+        has_concept: any("SELECT 1 FROM concepts WHERE deleted_at IS NULL")?,
+        has_example: any("SELECT 1 FROM concepts WHERE deleted_at IS NULL AND example_code IS NOT NULL")?,
+        has_problem: any("SELECT 1 FROM problems WHERE deleted_at IS NULL AND origin = 'manual'")?
+            || any("SELECT 1 FROM problem_attempts")?,
+        has_diary: any("SELECT 1 FROM diary_entries WHERE deleted_at IS NULL AND trim(body) <> ''")?,
+        has_practice: any("SELECT 1 FROM generated_sets")?,
     })
 }
 
@@ -712,17 +757,38 @@ pub fn charts(
 mod tests {
     use super::*;
 
+    fn days(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    fn st(current: i64, best: i64, rest_days: i64) -> Streaks {
+        Streaks { current, best, rest_days }
+    }
+
     #[test]
     fn streak_rules() {
-        let days: Vec<String> = ["2026-09-20", "2026-09-21", "2026-09-22", "2026-09-23"].iter().map(|s| s.to_string()).collect();
+        // 2026-09-21 is a Monday.
+        let d = days(&["2026-09-20", "2026-09-21", "2026-09-22", "2026-09-23"]);
         // today not logged yet: streak still 4
-        assert_eq!(streaks(&days, "2026-09-24").unwrap(), (4, 4));
-        let mut with_today = days.clone();
+        assert_eq!(streaks(&d, "2026-09-24").unwrap(), st(4, 4, 0));
+        let mut with_today = d.clone();
         with_today.push("2026-09-24".into());
-        assert_eq!(streaks(&with_today, "2026-09-24").unwrap(), (5, 5));
-        // a gap yesterday resets current but keeps best
-        assert_eq!(streaks(&days, "2026-09-26").unwrap(), (0, 4));
-        assert_eq!(streaks(&[], "2026-09-26").unwrap(), (0, 0));
+        assert_eq!(streaks(&with_today, "2026-09-24").unwrap(), st(5, 5, 0));
+        // yesterday missed but today can still be logged: a rest day, streak alive
+        assert_eq!(streaks(&d, "2026-09-25").unwrap(), st(4, 4, 1));
+        // two missed days in a row break it but keep best
+        assert_eq!(streaks(&d, "2026-09-26").unwrap(), st(0, 4, 0));
+        assert_eq!(streaks(&[], "2026-09-26").unwrap(), st(0, 0, 0));
+    }
+
+    #[test]
+    fn one_rest_day_per_week() {
+        // Missed Tue 22 (rest), logged 23, missed Thu 24: second miss that week breaks it.
+        let d = days(&["2026-09-21", "2026-09-23", "2026-09-25"]);
+        assert_eq!(streaks(&d, "2026-09-25").unwrap(), st(1, 2, 0));
+        // A miss in the next week is forgiven again.
+        let d = days(&["2026-09-26", "2026-09-27", "2026-09-29"]);
+        assert_eq!(streaks(&d, "2026-09-29").unwrap(), st(3, 3, 1));
     }
 
     #[test]

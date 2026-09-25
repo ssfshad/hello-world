@@ -13,6 +13,7 @@
   "nav": {
     "today": "Today",
     "dashboard": "Dashboard",
+    "knowledge": "Knowledge",
     "notebook": "Notebook",
     "practice": "Practice",
     "insights": "Insights",
@@ -136,7 +137,7 @@
     "context": "Day {{day}} of your journey",
     "title": "Today",
     "empty": "Nothing logged yet. Start a session or add what you learned.",
-    "reviewSuggestion": "Practice {{concept}}, learned {{days}} days ago",
+    "reviewSuggestion": "Review {{concept}}, learned {{days}} days ago",
     "timerCard": "Session",
     "notRunning": "Ready when you are",
     "startedAt": "Started {{time}}",
@@ -173,6 +174,15 @@
     "outputHint": "Hello World has no compiler, so paste the output from yours.",
     "exampleToggle": "Example",
     "exampleNoOutput": "No output pasted yet",
+    "exampleOpen": "Write example",
+    "exampleEdit": "Edit example",
+    "exampleEmpty": "Optional: a small piece of code that uses it, and what it printed.",
+    "exampleEditorTitle": "Example: {{name}}",
+    "exampleEditorHint": "Tab indents, Shift+Tab outdents. Esc or Done keeps your work.",
+    "exampleFile": "main",
+    "exampleClear": "Clear",
+    "exampleLines_one": "{{count}} line",
+    "exampleLines_other": "{{count}} lines",
     "categoryLabel": "Category",
     "sourceLabel": "Source",
     "sourcePlaceholder": "Paste a link",
@@ -291,7 +301,11 @@
     "reviewEasy": "Easy",
     "reviewOk": "OK",
     "reviewHard": "Hard",
-    "reviewSkip": "Skip"
+    "reviewSkip": "Skip",
+    "restDays_one": "incl. {{count}} rest day",
+    "restDays_other": "incl. {{count}} rest days",
+    "restHint": "One missed day a week won't break your streak.",
+    "startReview": "Review"
   },
   "charts": {
     "notEnough": "Log a few more days to see this chart.",
@@ -370,7 +384,9 @@
     "openLetter": "Open letter",
     "writtenOn": "Written {{date}}",
     "noLetters": "No letters yet. Write one to the person you'll be in a month.",
-    "seal": "Seal letter"
+    "seal": "Seal letter",
+    "tryProject": "Try a mini project",
+    "weeklyReview": "Weekly review"
   },
   "notebook": {
     "title": "Notebook",
@@ -400,7 +416,8 @@
       "diary": "Diary",
       "concept": "Concept",
       "problem": "Problem",
-      "resource": "Library"
+      "resource": "Library",
+      "error": "Error"
     },
     "dayCell": "{{date}}: {{time}}{{mood}}",
     "moodSuffix": ", mood {{mood}}"
@@ -422,7 +439,8 @@
     "styles": {
       "beginner": "Beginner-clear",
       "story": "Story-based",
-      "cf": "Codeforces-style"
+      "cf": "Codeforces-style",
+      "project": "Mini project"
     },
     "generateWith": "Generate with",
     "copyMode": "Copy prompt",
@@ -621,6 +639,195 @@
     "problemPlaceholder": "Problem title",
     "diaryPlaceholder": "One line about how it's going",
     "logged": "Logged"
+  },
+  "knowledge": {
+    "title": "Knowledge",
+    "context": "Everything you've learned, in your own words",
+    "tabs": {
+      "concepts": "Concepts",
+      "errors": "Errors I fixed",
+      "glossary": "Glossary"
+    },
+    "searchConcepts": "Search your concepts…",
+    "category": "Category",
+    "uncategorized": "No category",
+    "status": {
+      "new": "New",
+      "due": "Due for review",
+      "learning": "Learning",
+      "solid": "Solid"
+    },
+    "learnedOn": "Learned {{date}}",
+    "review_one": "Review {{count}} due",
+    "review_other": "Review {{count}} due",
+    "count_one": "{{count}} concept",
+    "count_other": "{{count}} concepts",
+    "emptyConcepts": "Nothing here yet. Everything you add under “What I learned” on Today collects here as your own cheat sheet.",
+    "goToday": "Go to Today",
+    "noMatch": "No concepts match. Try another word.",
+    "note": "In my words",
+    "noNote": "No note yet.",
+    "example": "Example",
+    "noExample": "No example yet.",
+    "addExample": "Add one",
+    "problems": "Problems that used it",
+    "errors": "Errors about it",
+    "practice": "Practice this",
+    "reviewNow": "Review now",
+    "nextReview": "Next review {{date}}",
+    "errorsIntro": "Every error you fix is progress. Log it once, and the next time you paste the same error, Hello World shows you how you fixed it.",
+    "logError": "Log an error",
+    "emptyErrors": "No errors logged yet. When the output you paste shows an error, the example editor offers to log it for you.",
+    "hits_one": "Seen once",
+    "hits_other": "Seen {{count}} times",
+    "sameAgain": "Hit it again",
+    "cause": "What caused it",
+    "fix": "How I fixed it",
+    "noFix": "No fix written yet.",
+    "glossaryIntro": "Words that trip beginners up. They're underlined in your notes and problems. Hover or focus one to see what it means.",
+    "addTerm": "Add a term",
+    "builtin": "Built in",
+    "searchGlossary": "Search terms…",
+    "emptyGlossary": "No terms match.",
+    "deleted": "Deleted"
+  },
+  "errorNote": {
+    "titleNew": "Log an error",
+    "titleEdit": "Edit error",
+    "message": "The error",
+    "messageHint": "Paste the line your compiler printed.",
+    "messagePlaceholder": "IndexError: list index out of range",
+    "cause": "What caused it?",
+    "causePlaceholder": "e.g. my loop went one step too far",
+    "fix": "How did you fix it?",
+    "fixPlaceholder": "e.g. looped over the items instead of the positions",
+    "concept": "Related concept",
+    "saved": "Saved to your error journal"
+  },
+  "glossaryTerm": {
+    "titleNew": "Add a term",
+    "titleEdit": "Edit term",
+    "term": "Term",
+    "definition": "What it means, in plain words",
+    "saved": "Saved to your glossary"
+  },
+  "errorAssist": {
+    "seenBefore": "You've seen this error before",
+    "lastFix": "Last time you fixed it like this:",
+    "noFixYet": "You logged it before but didn't write down the fix.",
+    "sameAgain": "Same again",
+    "counted_one": "Counted. You've hit this error {{count}} time.",
+    "counted_other": "Counted. You've hit this error {{count}} times.",
+    "looksLikeError": "This looks like an error.",
+    "logIt": "Log it in your error journal, and next time you'll see how you fixed it.",
+    "logButton": "Log this error"
+  },
+  "recall": {
+    "title": "Review",
+    "progress": "{{n}} of {{total}}",
+    "learnedAgo_one": "Learned {{count}} day ago",
+    "learnedAgo_other": "Learned {{count}} days ago",
+    "prompt": "What do you remember about this?",
+    "scratch": "Explain it or write a tiny example before you look (not saved)",
+    "reveal": "Show my note",
+    "yourNote": "Your note",
+    "noNote": "You didn't write a note for this one.",
+    "addNote": "Add a note now",
+    "howWasIt": "How well did you remember it?",
+    "forgot": "Forgot",
+    "fuzzy": "Fuzzy",
+    "gotIt": "Got it",
+    "keys": "Keys: Space shows your note, then 1, 2 or 3 to rate it.",
+    "doneTitle": "Review done",
+    "doneBody_one": "You reviewed {{count}} concept. Remembering before looking is what makes things stick.",
+    "doneBody_other": "You reviewed {{count}} concepts. Remembering before looking is what makes things stick.",
+    "nothingDue": "Nothing is due right now. Nice."
+  },
+  "guide": {
+    "title": "Getting started",
+    "progress": "{{done}} of {{total}} done",
+    "hide": "Hide guide",
+    "allDone": "You're all set. You know your way around Hello World.",
+    "steps": {
+      "session": {
+        "title": "Start a study session",
+        "body": "Press Start when you sit down to code. It keeps counting even if you close the app.",
+        "action": "Show me"
+      },
+      "concept": {
+        "title": "Write down one thing you learned",
+        "body": "A few words in your own language is enough.",
+        "action": "Add it"
+      },
+      "example": {
+        "title": "Add a small example",
+        "body": "A few lines of code, and what they printed when you ran them.",
+        "action": "Write one"
+      },
+      "problem": {
+        "title": "Log a problem you tried",
+        "body": "Solved or not, it counts.",
+        "action": "Log a problem"
+      },
+      "diary": {
+        "title": "Write how today felt",
+        "body": "One sentence. Future you will want to read it.",
+        "action": "Write it"
+      },
+      "practice": {
+        "title": "Get practice problems",
+        "body": "Made only from concepts you've logged.",
+        "action": "Open Practice"
+      }
+    }
+  },
+  "welcome": {
+    "title": "Welcome back, {{name}}",
+    "body_one": "It's been {{count}} day. That's okay: coming back is the part that counts.",
+    "body_other": "It's been {{count}} days. That's okay: coming back is the part that counts.",
+    "leftOff": "Where you left off",
+    "review": "Warm up with a quick review",
+    "start": "Start a session"
+  },
+  "week": {
+    "title": "Weekly review",
+    "range": "{{from}} – {{to}}",
+    "cardTitle": "Your week in review is ready",
+    "cardBody": "{{days}} days logged, {{concepts}} concepts. Take two minutes to look back.",
+    "open": "Look back",
+    "later": "Later",
+    "prev": "Previous week",
+    "next": "Next week",
+    "time": "Time",
+    "days": "Days logged",
+    "concepts": "Concepts",
+    "solved": "Problems solved",
+    "solvedSplit": "{{alone}} alone · {{help}} with help",
+    "errors": "Errors logged",
+    "learned": "What you learned",
+    "noConcepts": "No new concepts this week.",
+    "story": "The hard part",
+    "hardest": "Your hardest day was {{day}}, with mood {{mood}}.",
+    "after": "On {{day}} you came back anyway: {{concepts}} concepts and {{solved}} problems solved.",
+    "afterNone": "The week kept going after it. Rough days pass.",
+    "noHard": "No rough days this week.",
+    "questions": "Three quick questions",
+    "clicked": "What clicked this week?",
+    "clickedPh": "e.g. for loops finally make sense",
+    "fuzzy": "What's still fuzzy?",
+    "fuzzyPh": "e.g. when to use a dictionary instead of a list",
+    "focus": "One focus for next week",
+    "focusPh": "e.g. practise dictionaries",
+    "focusHint": "It shows on Today all next week.",
+    "save": "Save review",
+    "saved": "Review saved. Your focus will show on Today.",
+    "savedAt": "Saved {{date}}",
+    "focusPill": "This week's focus: {{focus}}",
+    "empty": "Nothing was logged this week, so there's nothing to look back on yet."
+  },
+  "hint": {
+    "stuck": "I'm stuck: copy a hint prompt",
+    "copied": "Hint prompt copied. Paste it into ChatGPT or Gemini. It asks for hints only, never the answer."
   },
   "report": {
     "title": "Learning report",

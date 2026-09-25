@@ -36,6 +36,9 @@ pub const TABLES: &[&str] = &[
     "roadmap_nodes",
     "roadmap_node_concepts",
     "ai_providers",
+    "error_notes",
+    "glossary_terms",
+    "weekly_reviews",
 ];
 
 fn table_rows(conn: &Connection, table: &str) -> AppResult<Vec<Value>> {

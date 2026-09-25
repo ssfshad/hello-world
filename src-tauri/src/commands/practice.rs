@@ -42,6 +42,11 @@ pub async fn practice_fixup_prompt(state: State<'_, AppState>, raw_text: String)
 }
 
 #[tauri::command(rename_all = "snake_case")]
+pub async fn problem_hint_prompt(state: State<'_, AppState>, id: String) -> AppResult<String> {
+    state.read(|c| practice::hint_prompt(c, &id, Utc::now()))
+}
+
+#[tauri::command(rename_all = "snake_case")]
 pub async fn practice_reliability(state: State<'_, AppState>) -> AppResult<Vec<ProviderReliability>> {
     state.read(practice::reliability)
 }

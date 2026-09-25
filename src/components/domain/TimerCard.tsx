@@ -67,7 +67,7 @@ export function TimerCard({
   const total = sessions.reduce((a, x) => a + (x.id === session?.id ? liveElapsed : x.elapsed_seconds), 0);
 
   return (
-    <Card tone="dark" aria-label={t('today.timerCard')}>
+    <Card tone="dark" id="timer-card" aria-label={t('today.timerCard')}>
       <div className={s.timerCard}>
         <div className={s.timerTop}>
           <span>{t('today.timerCard')}</span>

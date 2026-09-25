@@ -56,7 +56,7 @@ export default function PracticePage() {
   const [selected, setSelected] = useState<string[] | null>(preselect ? [preselect] : null);
   const [difficulty, setDifficulty] = useState(2);
   const [count, setCount] = useState(3);
-  const [style, setStyle] = useState<ProblemStyle>('beginner');
+  const [style, setStyle] = useState<ProblemStyle>(() => (params.get('style') === 'project' ? 'project' : 'beginner'));
   const [mode, setMode] = useState<'copy_prompt' | 'api'>('copy_prompt');
   const [struggles, setStruggles] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -205,7 +205,7 @@ export default function PracticePage() {
                   label={t('practice.style')}
                   value={style}
                   onChange={(e) => setStyle(e.target.value as ProblemStyle)}
-                  options={(['beginner', 'story', 'cf'] as const).map((v) => ({ value: v, label: t(`practice.styles.${v}`) }))}
+                  options={(['beginner', 'story', 'cf', 'project'] as const).map((v) => ({ value: v, label: t(`practice.styles.${v}`) }))}
                 />
               </div>
             </div>

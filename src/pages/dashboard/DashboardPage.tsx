@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, CheckCircle2, Clock, Flame, Play } from 'lucide-react';
+import { BookOpen, CheckCircle2, Clock, Flame, Play, RotateCcw } from 'lucide-react';
 import { PageHeader } from '@/app/PageHeader';
 import { Button, Card, EmptyState, Select, StatCard, Tabs, toast } from '@/components/ui';
 import { Heatmap, MoodUsefulnessChart, TimeBarChart } from '@/components/charts';
 import { InsightCard } from '@/components/domain/InsightCard';
+import { GettingStarted } from '@/components/domain/GettingStarted';
+import { RecallReview } from '@/components/domain/RecallReview';
 import {
   useAppState,
   useHeatmap,
@@ -20,7 +22,7 @@ import {
 import { useTimerStore } from '@/stores/timerStore';
 import { addDays, lastNDays } from '@/lib/day';
 import { formatDuration, signed } from '@/lib/format';
-import type { ReviewResult } from '@/core/types/api';
+import type { ReviewItem, ReviewResult } from '@/core/types/api';
 import s from '../pages.module.css';
 
 export default function DashboardPage() {
@@ -43,6 +45,7 @@ export default function DashboardPage() {
   const insightActions = useInsightActions();
   const timer = useTimerActions();
   const session = useTimerStore((st) => st.session);
+  const [recall, setRecall] = useState<ReviewItem[] | null>(null);
 
   if (!app) return null;
   const top = [...insights].sort((a, b) => b.priority - a.priority)[0];
@@ -78,6 +81,8 @@ export default function DashboardPage() {
         }
       />
 
+      <GettingStarted onAction={(step) => navigate(step === 'practice' ? '/practice' : `/today?do=${step}`)} />
+
       <div className={s.stats4}>
         <StatCard
           icon={<Clock size={16} aria-hidden="true" />}
@@ -111,7 +116,14 @@ export default function DashboardPage() {
           icon={<Flame size={16} aria-hidden="true" />}
           label={t('dashboard.streak')}
           value={overview ? t('common.days', { count: overview.current_streak }) : '–'}
-          sub={overview && t('dashboard.bestStreak', { count: overview.best_streak })}
+          sub={
+            overview && (
+              <span title={t('dashboard.restHint')}>
+                {t('dashboard.bestStreak', { count: overview.best_streak })}
+                {overview.streak_rest_days > 0 && ` · ${t('dashboard.restDays', { count: overview.streak_rest_days })}`}
+              </span>
+            )
+          }
         />
       </div>
 
@@ -166,7 +178,16 @@ export default function DashboardPage() {
           }
         />
         <TimeBarChart points={week} />
-        <Card title={t('dashboard.review')}>
+        <Card
+          title={t('dashboard.review')}
+          actions={
+            review.length > 0 && (
+              <Button size="sm" variant="primary" icon={<RotateCcw size={16} />} onClick={() => setRecall(review)}>
+                {t('dashboard.startReview')}
+              </Button>
+            )
+          }
+        >
           {review.length === 0 ? (
             <EmptyState>{t('dashboard.reviewEmpty')}</EmptyState>
           ) : (
@@ -179,7 +200,7 @@ export default function DashboardPage() {
                       {t('common.days', { count: r.days_since_learned })}
                     </div>
                   </div>
-                  <Button size="sm" variant="primary" onClick={() => navigate(`/practice?concept=${r.concept_id}`)}>
+                  <Button size="sm" variant="ghost" onClick={() => navigate(`/practice?concept=${r.concept_id}`)}>
                     {t('dashboard.practiceThis')}
                   </Button>
                   <ReviewButtons
@@ -196,6 +217,7 @@ export default function DashboardPage() {
           )}
         </Card>
       </div>
+      {recall && <RecallReview items={recall} onClose={() => setRecall(null)} />}
     </>
   );
 }

@@ -194,7 +194,7 @@ export default function NotebookPage() {
                 onChange={(e) => setKinds(e.target.value as SearchKind | '')}
                 options={[
                   { value: '', label: t('common.all') },
-                  ...(['diary', 'concept', 'problem', 'resource'] as const).map((k) => ({ value: k, label: t(`notebook.kinds.${k}`) })),
+                  ...(['diary', 'concept', 'problem', 'resource', 'error'] as const).map((k) => ({ value: k, label: t(`notebook.kinds.${k}`) })),
                 ]}
               />
               {query.trim().length >= 2 && (
@@ -208,7 +208,13 @@ export default function NotebookPage() {
                         <button
                           type="button"
                           className={s.hit}
-                          onClick={() => (h.kind === 'resource' ? navigate('/library') : h.day_key && navigate(`/notebook/${h.day_key}`))}
+                          onClick={() =>
+                            h.kind === 'resource'
+                              ? navigate('/library')
+                              : h.kind === 'error'
+                                ? navigate(`/knowledge?tab=errors&focus=${h.ref_id}`)
+                                : h.day_key && navigate(`/notebook/${h.day_key}`)
+                          }
                         >
                           <span className="row">
                             <Badge tone="muted">{t(`notebook.kinds.${h.kind}`)}</Badge>

@@ -25,6 +25,8 @@ describe('screens (mock backend)', () => {
   it.each([
     ['#/today', 'Today'],
     ['#/dashboard', 'Dashboard'],
+    ['#/knowledge', 'Knowledge'],
+    ['#/week', 'Weekly review'],
     ['#/notebook', 'Notebook'],
     ['#/practice', 'Practice'],
     ['#/insights', 'Insights'],

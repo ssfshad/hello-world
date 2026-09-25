@@ -302,6 +302,20 @@
 .codeOutput .codeArea::placeholder {
   color: var(--on-dark-muted);
 }
+/* Stretch to the parent's height instead of sizing by rows */
+.fieldFill {
+  flex: 1;
+  min-height: 0;
+}
+.codeFill {
+  flex: 1;
+  min-height: 0;
+}
+.codeFill .codeArea {
+  height: 100%;
+  min-height: 0;
+  resize: none;
+}
 /* Read-only rendering of a saved example */
 .codeBlock {
   margin: 0;
@@ -355,6 +369,14 @@
 }
 .modalWide {
   width: min(860px, 100%);
+}
+.modalFull {
+  width: min(1280px, 100%);
+  height: calc(100vh - 48px);
+}
+.modalFull .modalBody {
+  flex: 1;
+  min-height: 0;
 }
 .modalHeader {
   display: flex;

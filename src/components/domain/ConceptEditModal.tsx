@@ -1,10 +1,20 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Concept } from '@/core/types/api';
-import { Button, Chip, ChipGroup, CodeCanvas, Modal, TextArea, TextField } from '@/components/ui';
+import { Button, Chip, ChipGroup, Modal, TextArea, TextField } from '@/components/ui';
 import { useCategories, useConceptMutations } from '@/data/queries';
+import { ExampleField } from './ExampleEditor';
 
-export function ConceptEditModal({ concept, onClose }: { concept: Concept; onClose: () => void }) {
+export function ConceptEditModal({
+  concept,
+  onClose,
+  openExample = false,
+}: {
+  concept: Concept;
+  onClose: () => void;
+  /** open the example editor right away */
+  openExample?: boolean;
+}) {
   const { t } = useTranslation();
   const m = useConceptMutations();
   const { data: categories = [] } = useCategories();
@@ -55,16 +65,14 @@ export function ConceptEditModal({ concept, onClose }: { concept: Concept; onClo
     >
       <TextField label={t('quickLog.concept')} value={name} maxLength={60} onChange={(e) => setName(e.target.value)} />
       <TextArea label={t('today.noteLabel')} value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
-      <CodeCanvas label={t('today.codeLabel')} hint={t('today.codeHint')} value={code} onChange={setCode} maxLength={20000} />
-      <CodeCanvas
-        variant="output"
-        label={t('today.outputLabel')}
-        hint={t('today.outputHint')}
-        placeholder={t('today.outputPlaceholder')}
-        value={output}
-        onChange={setOutput}
-        maxLength={20000}
-        minRows={3}
+      <ExampleField
+        name={name}
+        conceptId={concept.id}
+        code={code}
+        output={output}
+        onCodeChange={setCode}
+        onOutputChange={setOutput}
+        defaultOpen={openExample}
       />
       <ChipGroup label={t('today.categoryLabel')}>
         {categories.map((c) => (

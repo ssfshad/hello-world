@@ -215,11 +215,12 @@ function FieldWrap({
   hint,
   error,
   hideLabel,
+  className,
   children,
-}: FieldShell & { id: string; children: ReactNode }) {
+}: FieldShell & { id: string; className?: string; children: ReactNode }) {
   const { t } = useTranslation();
   return (
-    <div className={s.field}>
+    <div className={cx(s.field, className)}>
       {label && (
         <label htmlFor={id} className={cx(s.label, hideLabel && 'sr-only')}>
           {label}
@@ -285,7 +286,8 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
 /**
  * Monospace code canvas with line numbers. Tab indents (Shift+Tab outdents);
  * press Esc first to Tab out of the field. The "output" variant is a
- * terminal-style box for pasting what a compiler printed.
+ * terminal-style box for pasting what a compiler printed. `fill` stretches the
+ * canvas to its flex parent's height (used by the full-size example editor).
  */
 export function CodeCanvas({
   label,
@@ -300,6 +302,7 @@ export function CodeCanvas({
   maxLength,
   minRows = 6,
   autoFocus,
+  fill,
 }: FieldShell & {
   id?: string;
   value: string;
@@ -309,6 +312,7 @@ export function CodeCanvas({
   maxLength?: number;
   minRows?: number;
   autoFocus?: boolean;
+  fill?: boolean;
 }) {
   const auto = useId();
   const fid = id ?? auto;
@@ -352,8 +356,15 @@ export function CodeCanvas({
   };
 
   return (
-    <FieldWrap id={fid} label={label} hint={hint} error={error} hideLabel={hideLabel}>
-      <div className={cx(s.code, !isCode && s.codeOutput)}>
+    <FieldWrap
+      id={fid}
+      label={label}
+      hint={hint}
+      error={error}
+      hideLabel={hideLabel}
+      className={fill ? s.fieldFill : undefined}
+    >
+      <div className={cx(s.code, !isCode && s.codeOutput, fill && s.codeFill)}>
         {isCode && (
           <div ref={gutter} className={s.codeGutter} aria-hidden="true">
             {Array.from({ length: lines }, (_, i) => i + 1).join('\n')}
@@ -466,6 +477,7 @@ export function Modal({
   children,
   footer,
   wide,
+  full,
 }: {
   open: boolean;
   onClose: () => void;
@@ -473,6 +485,8 @@ export function Modal({
   children: ReactNode;
   footer?: ReactNode;
   wide?: boolean;
+  /** Near-fullscreen workspace, e.g. the example code editor. */
+  full?: boolean;
 }) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
@@ -492,7 +506,11 @@ export function Modal({
           'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
         ) ?? [],
       );
-    const first = focusables().find((el) => !el.dataset.modalClose) ?? focusables()[0];
+    // A field marked data-autofocus wins; otherwise the first control after the close button.
+    const first =
+      node?.querySelector<HTMLElement>('[data-autofocus]') ??
+      focusables().find((el) => !el.dataset.modalClose) ??
+      focusables()[0];
     first?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -532,7 +550,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={cx(s.modal, wide && s.modalWide)}
+        className={cx(s.modal, wide && s.modalWide, full && s.modalFull)}
       >
         <div className={s.modalHeader}>
           <h2 id={titleId} className={s.modalTitle}>

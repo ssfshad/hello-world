@@ -508,3 +508,12 @@
 .stepDotOn {
   background: var(--progress);
 }
+
+/* Today: the weekly focus sits above the cards, only when there is one. */
+.topRow {
+  display: flex;
+  margin-bottom: var(--s-4);
+}
+.topRow:empty {
+  display: none;
+}

@@ -4,6 +4,8 @@ import { Eye, Flag, Play } from 'lucide-react';
 import type { FeelingTag, Problem, ProblemStatus } from '@/core/types/api';
 import { Badge, Button, Chip, ChipGroup, Modal } from '@/components/ui';
 import { formatDuration } from '@/lib/format';
+import { GlossaryText } from './GlossaryText';
+import { HintButton } from './HintButton';
 import s from './domain.module.css';
 
 /**
@@ -55,7 +57,9 @@ export function ProblemDetail({
         <>
           <section className={s.section}>
             <h3>{t('problem.statement')}</h3>
-            <p>{st.statement}</p>
+            <p>
+              <GlossaryText text={st.statement} />
+            </p>
           </section>
           <div className={s.samples}>
             <section className={s.section}>
@@ -166,6 +170,7 @@ export function ProblemDetail({
             {t('practice.startTimer')}
           </Button>
         )}
+        {!solved && <HintButton problemId={problem.id} size="md" />}
         <span className="spacer" />
         {problem.origin === 'generated' && (
           <Button variant="ghost" icon={<Flag size={16} />} onClick={() => onFlag(!problem.flagged_bad)}>

@@ -5,12 +5,13 @@ import { useTimerStore } from '@/stores/timerStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAppState, useTimerActions } from '@/data/queries';
 import { toast } from '@/components/ui';
+import { NAV } from './nav';
 
-const PAGES = ['/today', '/dashboard', '/notebook', '/practice', '/insights', '/library', '/roadmaps'];
+const PAGES = NAV.map((n) => n.to);
 
 /**
  * App-scoped shortcuts (frontend.md §4):
- * Ctrl/Cmd+Enter start/pause · Ctrl/Cmd+K quick log · Ctrl/Cmd+1…7 pages · Esc closes modals (Modal).
+ * Ctrl/Cmd+Enter start/pause · Ctrl/Cmd+K quick log · Ctrl/Cmd+1…8 pages · Esc closes modals (Modal).
  */
 export function useGlobalShortcuts() {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export function useGlobalShortcuts() {
         return;
       }
       const n = Number(e.key);
-      if (n >= 1 && n <= 7) {
+      if (n >= 1 && n <= PAGES.length) {
         e.preventDefault();
         navigate(PAGES[n - 1]);
       }

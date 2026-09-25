@@ -19,6 +19,8 @@ import type {
   ConceptUpdate,
   DayRange,
   DiarySaveInput,
+  ErrorNoteInput,
+  GlossaryInput,
   ImportInput,
   InsightRuleId,
   InsightTrigger,
@@ -37,6 +39,7 @@ import type {
   RoadmapNodeInput,
   SearchFilters,
   SeriesMetric,
+  WeekReviewInput,
 } from '@/core/types/api';
 import { call } from './client';
 import { useTimerStore } from '@/stores/timerStore';
@@ -66,6 +69,12 @@ export const qk = {
   rulePrefs: ['insights', 'prefs'] as const,
   reliability: ['reliability'] as const,
   search: (q: string, f: SearchFilters) => ['search', q, f] as const,
+  errors: ['errors'] as const,
+  glossary: ['glossary'] as const,
+  // Under `stats` so anything that changes the log refreshes them.
+  guide: ['stats', 'guide'] as const,
+  week: (start: string | null) => ['stats', 'week', start] as const,
+  weekFocus: ['stats', 'week-focus'] as const,
 };
 
 type QOpts<T> = Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'>;
@@ -476,6 +485,7 @@ export function usePracticeActions() {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ['problems'] });
         qc.invalidateQueries({ queryKey: qk.reliability });
+        qc.invalidateQueries({ queryKey: qk.guide });
       },
     }),
     fixup: useMutation({ mutationFn: (raw_text: string) => call('practice_fixup_prompt', { raw_text }) }),
@@ -618,6 +628,73 @@ export function useSearch(query: string, filters: SearchFilters) {
     queryFn: () => call('search', { query, filters }),
     enabled: query.trim().length >= 2,
   });
+}
+
+// ───────────────────────── Error journal / glossary ─────────────────────────
+export function useErrorNotes(languageId?: string | null) {
+  return useQuery({
+    queryKey: [...qk.errors, languageId ?? null],
+    queryFn: () => call('error_note_list', { language_id: languageId ?? null }),
+  });
+}
+
+export function useErrorNoteMutations() {
+  const qc = useQueryClient();
+  const inv = () => {
+    qc.invalidateQueries({ queryKey: qk.errors });
+    qc.invalidateQueries({ queryKey: ['search'] });
+    qc.invalidateQueries({ queryKey: ['stats', 'week'] });
+  };
+  return {
+    save: useMutation({ mutationFn: (input: ErrorNoteInput) => call('error_note_save', { input }), onSuccess: inv }),
+    hit: useMutation({ mutationFn: (id: string) => call('error_note_hit', { id }), onSuccess: inv }),
+    remove: useMutation({ mutationFn: (id: string) => call('error_note_delete', { id }), onSuccess: inv }),
+  };
+}
+
+export function useGlossary() {
+  return useQuery({ queryKey: qk.glossary, queryFn: () => call('glossary_list'), staleTime: 60_000 });
+}
+
+export function useGlossaryMutations() {
+  const qc = useQueryClient();
+  const inv = () => qc.invalidateQueries({ queryKey: qk.glossary });
+  return {
+    save: useMutation({ mutationFn: (input: GlossaryInput) => call('glossary_save', { input }), onSuccess: inv }),
+    remove: useMutation({ mutationFn: (id: string) => call('glossary_delete', { id }), onSuccess: inv }),
+  };
+}
+
+// ───────────────────────── Weekly review / guide / hints ─────────────────────────
+/** `weekStart` null → the week a review is due for. */
+export function useWeekReview(weekStart: string | null) {
+  return useQuery({
+    queryKey: qk.week(weekStart),
+    queryFn: () => call('week_review_get', { week_start: weekStart }),
+  });
+}
+
+export function useWeekReviewSave() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: WeekReviewInput) => call('week_review_save', { input }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['stats', 'week'] });
+      qc.invalidateQueries({ queryKey: qk.weekFocus });
+    },
+  });
+}
+
+export function useWeekFocus() {
+  return useQuery({ queryKey: qk.weekFocus, queryFn: () => call('week_focus') });
+}
+
+export function useGettingStarted() {
+  return useQuery({ queryKey: qk.guide, queryFn: () => call('getting_started') });
+}
+
+export function useHintPrompt() {
+  return useMutation({ mutationFn: (id: string) => call('problem_hint_prompt', { id }) });
 }
 
 // ───────────────────────── Data ─────────────────────────

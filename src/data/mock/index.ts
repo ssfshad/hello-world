@@ -11,9 +11,12 @@ import { addDays, dayKeyFor, dayRange, daysBetween, weekStart, weekdayIndex } fr
 import { elapsedSeconds } from '@/lib/timer';
 import { formatDuration, truncate } from '@/lib/format';
 import { usefulness, compare, SCORE_VERSION } from './score';
+import { computeStreaks } from '@/lib/streak';
+import learningToolsSql from '../../../src-tauri/migrations/0004_learning_tools.sql?raw';
 import {
   buildFixupPrompt,
   buildGeneratePrompt,
+  buildHintPrompt,
   LLM_PREAMBLE,
   PROMPT_VERSION,
   validateResponse,
@@ -94,7 +97,23 @@ interface ProviderRow {
   is_default: boolean;
 }
 
+interface ErrorRow extends Omit<A.ErrorNote, 'concept_name' | 'problem_title'> {
+  deleted: boolean;
+}
+interface GlossaryRow extends A.GlossaryTerm {
+  deleted: boolean;
+}
+interface WeeklyRow {
+  clicked: string | null;
+  fuzzy: string | null;
+  focus: string | null;
+  updated_at: string;
+}
+
 interface Db {
+  errorNotes: ErrorRow[];
+  glossary: GlossaryRow[];
+  weekly: Record<string, WeeklyRow>;
   settings: A.AppSettings;
   profile: A.Profile | null;
   languages: A.Language[];
@@ -172,8 +191,24 @@ const CATEGORIES = [
 
 const REVIEW_INTERVALS = [1, 3, 7, 14, 30, 60];
 
+/** Built-in glossary terms, read from the same migration the Rust core runs. */
+const BUILTIN_GLOSSARY: [string, string, string][] = [
+  ...learningToolsSql.matchAll(/\('(gt-[a-z-]+)',\s*'((?:[^']|'')*)',\s*'((?:[^']|'')*)'/g),
+].map((m) => [m[1], m[2].replace(/''/g, "'"), m[3].replace(/''/g, "'")]);
+
 function emptyDb(): Db {
   return {
+    errorNotes: [],
+    glossary: BUILTIN_GLOSSARY.map(([id, term, definition]) => ({
+      id,
+      term,
+      definition,
+      language_id: null,
+      is_builtin: true,
+      updated_at: '2026-09-26T00:00:00Z',
+      deleted: false,
+    })),
+    weekly: {},
     settings: {
       theme: 'system',
       allow_diary_to_ai: false,
@@ -458,22 +493,7 @@ function hasActivity(day: string) {
 function streaks() {
   const t = today();
   const start = db.profile?.journey_start ?? t;
-  const days = dayRange(start, t);
-  let best = 0;
-  let run = 0;
-  for (const d of days) {
-    if (hasActivity(d)) {
-      run++;
-      best = Math.max(best, run);
-    } else run = 0;
-  }
-  let current = 0;
-  let cursor = hasActivity(t) ? t : addDays(t, -1);
-  while (daysBetween(start, cursor) >= 0 && hasActivity(cursor)) {
-    current++;
-    cursor = addDays(cursor, -1);
-  }
-  return { current, best };
+  return computeStreaks(dayRange(start, t).filter(hasActivity), t);
 }
 
 function dailyPoints(range: A.DayRange, lang?: string | null): A.DailyPoint[] {
@@ -1024,6 +1044,116 @@ function kindForPath(path: string): A.ResourceKind {
   return 'file';
 }
 
+function errorDto(e: ErrorRow): A.ErrorNote {
+  const { deleted: _d, ...rest } = e;
+  void _d;
+  const concept = e.concept_id ? liveConcepts().find((c) => c.id === e.concept_id) : undefined;
+  const problem = e.problem_id ? liveProblems().find((p) => p.id === e.problem_id) : undefined;
+  return { ...rest, concept_name: concept?.name ?? null, problem_title: problem?.title ?? null };
+}
+
+function glossaryDto(g: GlossaryRow): A.GlossaryTerm {
+  const { deleted: _d, ...rest } = g;
+  void _d;
+  return rest;
+}
+
+function cleanOpt(v: string | null | undefined, what: string, max: number): string | null {
+  const s = v?.trim();
+  if (!s) return null;
+  if (s.length > max) throw err('VALIDATION', `${what} must be at most ${max} characters`);
+  return s;
+}
+
+function dueWeek(day: string) {
+  const start = weekStart(day);
+  return weekdayIndex(day) >= 4 ? start : addDays(start, -7);
+}
+
+function weekDay(day: string): A.WeekDay {
+  const mood = avg(dayMoods(day).map((m) => m.value));
+  return {
+    day_key: day,
+    mood: mood == null ? null : Math.round(mood * 10) / 10,
+    concepts: liveConcepts().filter((c) => c.learned_day_key === day).length,
+    solved: liveProblems().filter((p) => p.day_key === day && (p.status === 'solved' || p.status === 'solved_with_help')).length,
+  };
+}
+
+function weekReview(start: string): A.WeekReview {
+  const end = addDays(start, 6);
+  const t = today();
+  const days = dayRange(start, end);
+  const inWeek = (d: string | null) => !!d && d >= start && d <= end;
+  const probs = liveProblems().filter((p) => !p.flagged_bad && inWeek(p.day_key));
+  let hardest: A.WeekDay | null = null;
+  for (const d of days) {
+    const w = weekDay(d);
+    if (w.mood != null && w.mood <= 3 && (!hardest || w.mood < (hardest.mood ?? 99))) hardest = w;
+  }
+  let after: A.WeekDay | null = null;
+  if (hardest) {
+    const from = addDays(hardest.day_key, 1);
+    const to = [addDays(hardest.day_key, 14), t].sort()[0];
+    const next = from <= to ? dayRange(from, to).find(hasActivity) : undefined;
+    after = next ? weekDay(next) : null;
+  }
+  const saved = db.weekly[start];
+  const now = Date.now();
+  return {
+    week_start: start,
+    week_end: end,
+    is_past: end < t,
+    focused_seconds: liveSessions()
+      .filter((s) => inWeek(s.day_key))
+      .reduce((acc, s) => acc + elapsedSeconds(s, now), 0),
+    days_logged: days.filter(hasActivity).length,
+    concepts: liveConcepts()
+      .filter((c) => inWeek(c.learned_day_key))
+      .sort((x, y) => x.learned_day_key.localeCompare(y.learned_day_key) || x.created_at.localeCompare(y.created_at))
+      .map((c) => ({ id: c.id, name: c.name })),
+    solved_alone: probs.filter((p) => p.status === 'solved').length,
+    solved_with_help: probs.filter((p) => p.status === 'solved_with_help').length,
+    attempted: probs.filter((p) => p.status === 'gave_up' || p.status === 'revisit' || p.status === 'in_progress').length,
+    errors_logged: db.errorNotes.filter((e) => !e.deleted && inWeek(e.day_key)).length,
+    hardest_day: hardest,
+    after_hardest: after,
+    clicked: saved?.clicked ?? null,
+    fuzzy: saved?.fuzzy ?? null,
+    focus: saved?.focus ?? null,
+    saved_at: saved?.updated_at ?? null,
+  };
+}
+
+function hintPrompt(id: string): string {
+  const p = getProblem(id);
+  const lang = db.languages.find((l) => l.id === p.language_id) ?? primaryLanguage();
+  if (!lang) throw err('VALIDATION', 'Add a language first');
+  const st = p.statement;
+  const parts: string[] = [];
+  if (st) {
+    if (st.statement) parts.push(st.statement);
+    if (st.input_format) parts.push(`Input: ${st.input_format}`);
+    if (st.output_format) parts.push(`Output: ${st.output_format}`);
+    if (st.constraints) parts.push(`Constraints: ${st.constraints}`);
+    st.samples.forEach((s, i) =>
+      parts.push(`Sample ${i + 1} input:\n${s.input.trimEnd()}\nSample ${i + 1} output:\n${s.output.trimEnd()}`),
+    );
+  }
+  return buildHintPrompt({
+    language: lang.name,
+    journey_day: journeyDay(),
+    title: p.title,
+    link: p.url,
+    statement: parts.join('\n'),
+    attempt: p.solution_text,
+    concepts: liveConcepts(lang.id)
+      .sort((x, y) => y.learned_day_key.localeCompare(x.learned_day_key))
+      .slice(0, 40)
+      .map((c) => c.name),
+  });
+}
+
 let generateAbort: (() => void) | null = null;
 
 const handlers: Record<A.CommandName, Handler> = {
@@ -1475,8 +1605,13 @@ const handlers: Record<A.CommandName, Handler> = {
       avg_solve_seconds: times.length ? Math.round(avg(times)!) : null,
       current_streak: st.current,
       best_streak: st.best,
+      streak_rest_days: st.rest_days,
       journey_day: journeyDay(),
       days_logged: dayRange(db.profile?.journey_start ?? t, t).filter(hasActivity).length,
+      last_active_day:
+        dayRange(db.profile?.journey_start ?? t, addDays(t, -1))
+          .filter(hasActivity)
+          .pop() ?? null,
     } satisfies A.StatsOverview;
   },
   stats_series: (a) => {
@@ -1683,6 +1818,7 @@ const handlers: Record<A.CommandName, Handler> = {
     const v = validateResponse(raw, [], 1);
     return buildFixupPrompt(raw, v.errors);
   },
+  problem_hint_prompt: (a) => hintPrompt(String(a.id)),
   practice_reliability: () => {
     const rows = new Map<string, A.ProviderReliability>();
     for (const p of liveProblems()) {
@@ -1970,7 +2106,7 @@ const handlers: Record<A.CommandName, Handler> = {
   search: (a) => {
     const q = String(a.query).trim();
     const f = arg<A.SearchFilters>(a, 'filters') ?? {};
-    const kinds = new Set(f.kinds?.length ? f.kinds : ['diary', 'concept', 'problem', 'resource']);
+    const kinds = new Set(f.kinds?.length ? f.kinds : ['diary', 'concept', 'problem', 'resource', 'error']);
     const inRange = (d: string | null) => (!f.from || (d ?? '') >= f.from) && (!f.to || (d ?? '') <= f.to);
     const ql = q.toLowerCase();
     const hits: A.SearchHit[] = [];
@@ -1992,8 +2128,120 @@ const handlers: Record<A.CommandName, Handler> = {
       for (const r of db.resources)
         if (!r.deleted && r.title.toLowerCase().includes(ql))
           hits.push({ kind: 'resource', ref_id: r.id, day_key: null, title: r.title, snippet: snippet(r.title, q) });
+    if (kinds.has('error'))
+      for (const e of db.errorNotes) {
+        const text = [e.message, e.cause, e.fix].filter(Boolean).join('\n');
+        if (!e.deleted && text.toLowerCase().includes(ql) && inRange(e.day_key))
+          hits.push({ kind: 'error', ref_id: e.id, day_key: e.day_key, title: e.message.split('\n')[0], snippet: snippet(text, q) });
+      }
     return hits.sort((x, y) => (y.day_key ?? '').localeCompare(x.day_key ?? '')).slice(0, f.limit ?? 50);
   },
+
+  error_note_list: (a) => {
+    const lang = a.language_id as string | null | undefined;
+    return db.errorNotes
+      .filter((e) => !e.deleted && (!lang || !e.language_id || e.language_id === lang))
+      .sort((x, y) => y.last_hit_at.localeCompare(x.last_hit_at))
+      .map(errorDto);
+  },
+  error_note_save: (a) => {
+    const input = arg<A.ErrorNoteInput>(a, 'input');
+    const message = input.message.trim();
+    if (!message) throw err('VALIDATION', "Error message can't be empty");
+    if (message.length > 4000) throw err('VALIDATION', 'Error message must be at most 4000 characters');
+    const fields = {
+      language_id: input.language_id ?? null,
+      message,
+      cause: cleanOpt(input.cause, 'Cause', 2000),
+      fix: cleanOpt(input.fix, 'Fix', 4000),
+      concept_id: input.concept_id ?? null,
+      problem_id: input.problem_id ?? null,
+    };
+    const t = nowIso();
+    if (input.id) {
+      const e = db.errorNotes.find((x) => x.id === input.id && !x.deleted);
+      if (!e) throw err('NOT_FOUND', 'error note not found');
+      Object.assign(e, fields, { updated_at: t });
+      return errorDto(e);
+    }
+    const e: ErrorRow = { id: uid(), ...fields, hits: 1, last_hit_at: t, day_key: today(), created_at: t, updated_at: t, deleted: false };
+    db.errorNotes.push(e);
+    return errorDto(e);
+  },
+  error_note_hit: (a) => {
+    const e = db.errorNotes.find((x) => x.id === a.id && !x.deleted);
+    if (!e) throw err('NOT_FOUND', 'error note not found');
+    e.hits++;
+    e.last_hit_at = e.updated_at = nowIso();
+    return errorDto(e);
+  },
+  error_note_delete: (a) => {
+    const e = db.errorNotes.find((x) => x.id === a.id && !x.deleted);
+    if (!e) throw err('NOT_FOUND', 'error note not found');
+    e.deleted = true;
+    return null;
+  },
+  glossary_list: () =>
+    db.glossary
+      .filter((g) => !g.deleted)
+      .sort((x, y) => x.term.toLowerCase().localeCompare(y.term.toLowerCase()))
+      .map(glossaryDto),
+  glossary_save: (a) => {
+    const input = arg<A.GlossaryInput>(a, 'input');
+    const term = input.term.trim();
+    const definition = input.definition.trim();
+    if (!term) throw err('VALIDATION', "Term can't be empty");
+    if (!definition) throw err('VALIDATION', "Definition can't be empty");
+    const lang = input.language_id ?? null;
+    const clash = db.glossary.find(
+      (g) => !g.deleted && g.id !== input.id && g.term.toLowerCase() === term.toLowerCase() && g.language_id === lang,
+    );
+    if (clash) throw err('CONFLICT', `"${term}" is already in your glossary`);
+    const t = nowIso();
+    if (input.id) {
+      const g = db.glossary.find((x) => x.id === input.id && !x.deleted);
+      if (!g) throw err('NOT_FOUND', 'glossary term not found');
+      Object.assign(g, { term, definition, language_id: lang, is_builtin: false, updated_at: t });
+      return glossaryDto(g);
+    }
+    const g: GlossaryRow = { id: uid(), term, definition, language_id: lang, is_builtin: false, updated_at: t, deleted: false };
+    db.glossary.push(g);
+    return glossaryDto(g);
+  },
+  glossary_delete: (a) => {
+    const g = db.glossary.find((x) => x.id === a.id && !x.deleted);
+    if (!g) throw err('NOT_FOUND', 'glossary term not found');
+    g.deleted = true;
+    return null;
+  },
+  week_review_get: (a) => weekReview(a.week_start ? weekStart(String(a.week_start)) : dueWeek(today())),
+  week_review_save: (a) => {
+    const input = arg<A.WeekReviewInput>(a, 'input');
+    if (weekStart(input.week_start) !== input.week_start) throw err('VALIDATION', 'week_start must be a Monday');
+    db.weekly[input.week_start] = {
+      clicked: cleanOpt(input.clicked, 'What clicked', 2000),
+      fuzzy: cleanOpt(input.fuzzy, "What's still fuzzy", 2000),
+      focus: cleanOpt(input.focus, 'Focus', 200),
+      updated_at: nowIso(),
+    };
+    return weekReview(input.week_start);
+  },
+  week_focus: () => {
+    const from = addDays(weekStart(today()), -7);
+    const hit = Object.entries(db.weekly)
+      .filter(([w, r]) => w >= from && r.focus)
+      .sort(([x], [y]) => y.localeCompare(x))[0];
+    return hit ? { week_start: hit[0], focus: hit[1].focus! } : null;
+  },
+  getting_started: () =>
+    ({
+      has_session: liveSessions().length > 0,
+      has_concept: liveConcepts().length > 0,
+      has_example: liveConcepts().some((c) => !!c.example_code),
+      has_problem: liveProblems().some((p) => p.origin === 'manual') || db.attempts.length > 0,
+      has_diary: db.diaries.some((d) => d.body.trim() !== ''),
+      has_practice: db.sets.length > 0,
+    }) satisfies A.GettingStarted,
 
   backup_now: () => {
     const b: A.BackupInfo = { id: `app-${Date.now()}-manual.db`, kind: 'manual', created_at: nowIso(), size_bytes: 412_000 };
@@ -2236,6 +2484,40 @@ function seed() {
   mk('Object-oriented programming', null, 3, 'not_started');
   db.providers.push({ id: uid(), kind: 'ollama', label: 'Local Llama', base_url: 'http://localhost:11434', model: 'llama3.1:8b', key: null, is_default: true });
   db.backups.push({ id: `app-${t0.replace(/-/g, '')}-090000-auto.db`, kind: 'auto', created_at: at(t0, 9), size_bytes: 398_000 });
+  const errorAt = (daysAgo: number) => at(addDays(t0, -daysAgo), 19);
+  const listy = db.concepts.find((c) => c.name.toLowerCase().includes('list'));
+  db.errorNotes.push(
+    {
+      id: uid(),
+      language_id: py.id,
+      message: 'IndexError: list index out of range',
+      cause: 'My loop went one step past the end of the list.',
+      fix: 'Loop over the items directly, or use range(len(items)).',
+      concept_id: listy?.id ?? null,
+      problem_id: null,
+      hits: 2,
+      last_hit_at: errorAt(3),
+      day_key: addDays(t0, -9),
+      created_at: errorAt(9),
+      updated_at: errorAt(3),
+      deleted: false,
+    },
+    {
+      id: uid(),
+      language_id: py.id,
+      message: 'TypeError: can only concatenate str (not "int") to str',
+      cause: 'I added a number to some text.',
+      fix: 'Wrap the number in str(), or use an f-string.',
+      concept_id: null,
+      problem_id: null,
+      hits: 1,
+      last_hit_at: errorAt(16),
+      day_key: addDays(t0, -16),
+      created_at: errorAt(16),
+      updated_at: errorAt(16),
+      deleted: false,
+    },
+  );
 
   evaluate('day_closed');
   evaluate('app_opened');
