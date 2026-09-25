@@ -54,14 +54,26 @@ feelings.
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/today.png" alt="Today: session timer, mood check-in, what I learned, diary and usefulness" width="860" />
-  <br /><sub><b>Today</b>: timer, mood check-in, what you learned, diary and the usefulness score</sub>
+  <img src="docs/screenshots/today.png" alt="Today: session timer, mood check-in, what I learned with examples, problems, diary and this week's focus" width="860" />
+  <br /><sub><b>Today</b>: timer, mood, what you learned, problems, diary, and this week's focus</sub>
 </p>
 
 <table>
 <tr>
+<td width="50%"><img src="docs/screenshots/getting-started.png" alt="Getting started: six steps that take a new learner straight to each part of the app" /><br /><sub><b>Getting started</b>: every step's button lands exactly where you act</sub></td>
+<td width="50%"><img src="docs/screenshots/example-editor.png" alt="Example editor: code on the left, pasted output on the right, and the fix for an error seen before" /><br /><sub><b>Example editor</b>: code beside output, and <i>"you've seen this error before"</i></sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/knowledge.png" alt="Knowledge: every concept as a cheat sheet with review status" /><br /><sub><b>Knowledge</b>: your concepts as a cheat sheet</sub></td>
+<td width="50%"><img src="docs/screenshots/recall.png" alt="Recall review: remember first, then reveal your own note and rate it" /><br /><sub><b>Recall review</b>: remember first, then check your own note</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/errors.png" alt="Error journal: errors you fixed, what caused them and how you fixed them" /><br /><sub><b>Errors I fixed</b>: your error journal</sub></td>
+<td width="50%"><img src="docs/screenshots/weekly-review.png" alt="Weekly review: the week's numbers, what you learned and three short questions" /><br /><sub><b>Weekly review</b>: two minutes to look back and pick a focus</sub></td>
+</tr>
+<tr>
 <td width="50%"><img src="docs/screenshots/dashboard.png" alt="Dashboard: total time, concepts, problems solved alone and with help, streak, charts" /><br /><sub><b>Dashboard</b>: time, concepts, problems (alone · with help), streak and charts</sub></td>
-<td width="50%"><img src="docs/screenshots/practice.png" alt="Practice: build a prompt from your own concepts and paste the AI response back" /><br /><sub><b>Practice</b>: build a prompt from your own concepts, then paste the answer back</sub></td>
+<td width="50%"><img src="docs/screenshots/practice.png" alt="Practice: build a prompt from your own concepts and paste the AI response back" /><br /><sub><b>Practice</b>: problems or mini projects from your own concepts</sub></td>
 </tr>
 </table>
 
