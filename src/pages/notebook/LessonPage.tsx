@@ -1,11 +1,11 @@
 /**
  * One lesson: a cover (icon, colour, title, course, date), the "What I
- * learned" concepts that came out of it, and two ways to take notes — a
- * written page and a free-form board. Everything saves as you go.
+ * learned" concepts that came out of it, and one big canvas for notes: written
+ * pages, drawings, stickers and photos together. Everything saves as you go.
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -18,7 +18,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { Concept, Lesson, LessonUpdate } from '@/core/types/api';
-import { Button, Chip, EmptyState, Modal, Tabs, cx, toast } from '@/components/ui';
+import { Button, Chip, EmptyState, Modal, cx, toast } from '@/components/ui';
 import { ConceptInput, type NewConcept } from '@/components/domain/ConceptInput';
 import { ConceptEditModal } from '@/components/domain/ConceptEditModal';
 import { call, toAppError } from '@/data/client';
@@ -36,17 +36,13 @@ import {
 import { COVER_COLORS, LESSON_ICONS } from '@/components/lesson/palette';
 import { Popover } from '@/components/lesson/Popover';
 import { assetUrl, prepareImage } from '@/components/lesson/images';
-import type { PageEditorHandle, Uploaded } from '@/components/lesson/PageEditor';
+import type { Uploaded } from '@/components/lesson/PageEditor';
 import type { BoardHandle } from '@/components/lesson/Board';
 import s from './notebook.module.css';
 
-const PageEditor = lazy(() =>
-  import('@/components/lesson/PageEditor').then((m) => ({ default: m.PageEditor })),
-);
 const Board = lazy(() => import('@/components/lesson/Board').then((m) => ({ default: m.Board })));
 
 type Status = 'saved' | 'pending' | 'saving' | 'error';
-type View = 'page' | 'board';
 
 /**
  * Collects edits and saves them in one call after a short pause, and right
@@ -139,9 +135,6 @@ export default function LessonPage() {
 function LessonEditor({ lesson }: { lesson: Lesson }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [params, setParams] = useSearchParams();
-  const view: View = params.get('view') === 'board' ? 'board' : 'page';
-  const setParamsView = (v: View) => setParams(v === 'page' ? {} : { view: v }, { replace: true });
   const { data: app } = useAppState();
   const { data: allLessons = [] } = useLessons();
   const lessonM = useLessonMutations();
@@ -156,14 +149,7 @@ function LessonEditor({ lesson }: { lesson: Lesson }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [dropping, setDropping] = useState(false);
 
-  const pageRef = useRef<PageEditorHandle>(null);
   const boardRef = useRef<BoardHandle>(null);
-  const viewRef = useRef(view);
-  viewRef.current = view;
-  // Save first, so the other view opens with the latest page or board.
-  const setView = (v: View) => {
-    void flush().then(() => setParamsView(v));
-  };
 
   const courses = useMemo(
     () => [...new Set(allLessons.map((l) => l.course).filter((c): c is string => !!c))].sort(),
@@ -204,8 +190,7 @@ function LessonEditor({ lesson }: { lesson: Lesson }) {
           }
         }
         if (!ups.length) return;
-        if (viewRef.current === 'board') await boardRef.current?.insertImages(ups);
-        else pageRef.current?.insertImages(ups);
+        await boardRef.current?.insertImages(ups);
       },
       (hovering) => setDropping(hovering),
     ).then((u) => {
@@ -366,39 +351,16 @@ function LessonEditor({ lesson }: { lesson: Lesson }) {
 
       <LearnedRow lesson={lesson} onChange={(ids) => schedule({ concept_ids: ids }, 0)} />
 
-      <div className={s.viewTabs}>
-        <Tabs<View>
-          label={t('lessons.views')}
-          value={view}
-          onChange={setView}
-          options={[
-            { value: 'page', label: `📝 ${t('lessons.page.tab')}` },
-            { value: 'board', label: `🎨 ${t('lessons.board.tab')}` },
-          ]}
-        />
-        <span className="muted" style={{ fontSize: '0.83rem' }}>
-          {view === 'page' ? t('lessons.page.about') : t('lessons.board.about')}
-        </span>
-      </div>
-
       <Suspense fallback={<div className={s.lessonLoading} aria-busy="true" />}>
-        {view === 'page' ? (
-          <PageEditor
-            ref={pageRef}
-            initial={lesson.page}
-            assets={lesson.assets}
-            upload={upload}
-            onChange={(page, text) => schedule({ page, page_text: text })}
-          />
-        ) : (
-          <Board
-            ref={boardRef}
-            lessonId={lesson.id}
-            initial={lesson.board}
-            upload={upload}
-            onChange={(board) => schedule({ board }, 1200)}
-          />
-        )}
+        <Board
+          ref={boardRef}
+          lessonId={lesson.id}
+          initial={lesson.board}
+          legacyPage={lesson.page}
+          assets={lesson.assets}
+          upload={upload}
+          onChange={(board, text) => schedule({ board, page_text: text }, 1200)}
+        />
       </Suspense>
 
       {dropping && (

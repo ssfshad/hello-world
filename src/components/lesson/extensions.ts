@@ -104,3 +104,19 @@ export function assetIdsIn(doc: JSONContent): string[] {
   });
   return out;
 }
+
+/** The plain words of a saved page, for search and the lesson's preview. */
+export function docText(doc: JSONContent | null | undefined): string {
+  if (!doc) return '';
+  const parts: string[] = [];
+  const walk = (n: JSONContent) => {
+    if (typeof n.text === 'string') parts.push(n.text);
+    n.content?.forEach(walk);
+    if (n.type && n.type !== 'text' && n.type !== 'doc') parts.push('\n');
+  };
+  walk(doc);
+  return parts
+    .join('')
+    .replace(/\n{2,}/g, '\n')
+    .trim();
+}

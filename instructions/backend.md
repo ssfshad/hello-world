@@ -408,9 +408,9 @@ CREATE TABLE weekly_reviews (
 -- Notebook lessons (migration 0005)
 CREATE TABLE lessons (
   id, title, course, icon, color, language_id, day_key,
-  page        TEXT,                      -- rich page as the editor's JSON document
-  page_text   TEXT,                      -- the page as plain text (search, previews)
-  board       TEXT,                      -- board scene JSON; pictures referenced by lesson_assets.id
+  page        TEXT,                      -- legacy (before v1.2.1): the lesson's single rich page; the UI now moves it onto the board
+  page_text   TEXT,                      -- all written pages and canvas text as plain text (search, previews)
+  board       TEXT,                      -- canvas JSON (v2: elements + written pages); pictures referenced by lesson_assets.id
   deleted_at, created_at, updated_at
 );
 CREATE TABLE lesson_concepts (lesson_id, concept_id, PRIMARY KEY (lesson_id, concept_id));
@@ -420,7 +420,7 @@ CREATE TABLE lesson_assets (              -- pictures copied into library/lesson
 ```
 Pictures are recognised by their first bytes (PNG, JPEG, GIF, WebP, BMP, AVIF, SVG),
 at most 25 MB, de-duplicated per lesson by SHA-256. Pages are at most 2 MB and boards
-8 MB of JSON (pictures live in files, not in these).
+8 MB of JSON, which now includes the written pages (pictures live in files, not in these).
 
 ### Full-text search
 
@@ -939,7 +939,7 @@ included.
 | **v0.5** | Library storage, roadmaps + import, AI providers (Ollama, OpenAI-compatible, Gemini, Anthropic, OpenRouter), keychain |
 | **v1.0** | Letters, LLM-ready Markdown report, optional AI diary linking, diagnostics export, signed builds, auto-update |
 | **v1.1** | Error journal, glossary, weekly reviews, getting-started progress, rest-day streaks, hint prompt, mini-project style |
-| **v1.2** | Notebook lessons: rich pages, boards, lesson pictures, lesson ↔ concept links |
+| **v1.2** | Notebook lessons: rich pages and one canvas board per lesson (pages are cards on it), lesson pictures, lesson ↔ concept links |
 | **v2.0** | Opt-in community sync of aggregate stats only (separate spec; requires a server, accounts, moderation and anti-cheat) |
 
 ---

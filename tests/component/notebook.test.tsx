@@ -2,7 +2,12 @@
  * Notebook lessons against the mock backend: the shelf (welcome, courses,
  * creating a lesson), a saved page opening in the editor, linking "What I
  * learned" concepts, search, and the Days tab still being there.
+ *
+ * The canvas itself (Excalidraw) cannot draw in jsdom, so a stand-in board
+ * holds one real page card; pages, the shared toolbar and saving are real.
  */
+import { createElement, forwardRef, useImperativeHandle, useState } from 'react';
+import type { ReactNode } from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App, queryClient } from '@/app/App';
@@ -13,7 +18,56 @@ import { expectNoA11yViolations } from '../a11y';
 
 const T = { timeout: 15000 };
 
+vi.mock('@/components/lesson/Board', async () => {
+  const { PageCard, Toolbar } = await import('@/components/lesson/PageEditor');
+  const { legacyDoc } = await import('@/components/lesson/boardModel');
+  const Board = forwardRef(function BoardStandIn(
+    props: {
+      legacyPage: string | null;
+      onChange: (board: string | null, text: string | null) => void;
+    },
+    ref,
+  ) {
+    useImperativeHandle(ref, () => ({ insertImages: async () => {} }));
+    const [active, setActive] = useState<React.ComponentProps<typeof Toolbar>['editor'] | null>(
+      null,
+    );
+    const nodes: ReactNode[] = [];
+    if (active)
+      nodes.push(
+        createElement(Toolbar, {
+          key: 'bar',
+          editor: active,
+          uploading: false,
+          onPickImages: () => {},
+        }),
+      );
+    nodes.push(
+      createElement(PageCard, {
+        key: 'page',
+        initial: legacyDoc(props.legacyPage),
+        urls: new Map(),
+        upload: async () => {
+          throw new Error('no uploads here');
+        },
+        onChange: (_doc, text) => props.onChange('{"type":"hello-world-board"}', text),
+        onFocus: (p) => setActive(p.editor),
+        onGone: () => setActive(null),
+      }),
+    );
+    return createElement('div', null, nodes);
+  });
+  return { Board };
+});
+
 describe('notebook lessons', () => {
+  // jsdom has no layout; the text editor asks for positions when typing.
+  beforeAll(() => {
+    const none = () => ({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] });
+    Range.prototype.getClientRects = none as unknown as Range['getClientRects'];
+    Range.prototype.getBoundingClientRect = () => new DOMRect();
+    document.elementFromPoint = () => null;
+  });
   beforeEach(() => {
     queryClient.clear();
     resetMock({ seeded: true });
@@ -44,8 +98,16 @@ describe('notebook lessons', () => {
     expect(await screen.findByRole('textbox', { name: 'Lesson title' }, T)).toHaveValue(
       'Dictionaries',
     );
-    expect(screen.getByRole('tab', { name: /Page/ })).toHaveAttribute('aria-selected', 'true');
+    // The writing tools appear once a page is being written on.
+    const editor = await screen.findByRole('textbox', { name: 'Lesson page' }, T);
+    expect(screen.queryByRole('toolbar', { name: 'Formatting' })).not.toBeInTheDocument();
+    await user.click(editor);
     expect(await screen.findByRole('toolbar', { name: 'Formatting' }, T)).toBeInTheDocument();
+    await user.keyboard('Keys are unique');
+    await waitFor(async () => {
+      const [saved] = (await mockInvoke('lesson_list', {})) as Lesson[];
+      expect(saved.has_board).toBe(true);
+    }, T);
 
     const lessons = (await mockInvoke('lesson_list', {})) as Lesson[];
     expect(lessons).toHaveLength(1);

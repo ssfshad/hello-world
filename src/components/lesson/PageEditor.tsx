@@ -1,8 +1,9 @@
 /**
- * The lesson's written page: a notebook page with headings, fonts, colours,
- * highlighter, lists, checklists, callouts, code, symbols and pictures.
+ * A written page on the lesson board: a notebook page with headings, fonts,
+ * colours, highlighter, lists, checklists, callouts, code, symbols and pictures.
+ * The formatting toolbar is shared and works on whichever page is being written.
  */
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react';
 import type { JSONContent } from '@tiptap/core';
@@ -47,7 +48,7 @@ import {
 } from './palette';
 import { Popover } from './Popover';
 import { SymbolPicker } from './SymbolPicker';
-import { assetUrl, isImageFile, pickImages } from './images';
+import { isImageFile } from './images';
 import s from './lesson.module.css';
 import './lessonFonts';
 
@@ -56,96 +57,61 @@ export interface Uploaded {
   url: string;
 }
 
-export interface PageEditorHandle {
-  insertImages: (items: Uploaded[]) => void;
+/** What the board needs to know about the page card being written on. */
+export interface ActivePage {
+  editor: Editor;
+  /** Adds pictures at the cursor. */
+  insertFiles: (files: File[]) => Promise<void>;
 }
 
 const EMPTY_DOC: JSONContent = { type: 'doc', content: [{ type: 'paragraph' }] };
 
-function parseDoc(raw: string | null): JSONContent {
-  if (!raw) return EMPTY_DOC;
-  try {
-    const d = JSON.parse(raw) as JSONContent;
-    return d && d.type === 'doc' ? d : EMPTY_DOC;
-  } catch {
-    return EMPTY_DOC;
-  }
-}
-
-export const PageEditor = forwardRef<
-  PageEditorHandle,
-  {
-    initial: string | null;
-    assets: LessonAsset[];
-    onChange: (page: string | null, text: string | null) => void;
-    upload: (file: File) => Promise<Uploaded>;
-  }
->(function PageEditor({ initial, assets, onChange, upload }, ref) {
-  const [urls, setUrls] = useState<Map<string, string> | null>(null);
-  useEffect(() => {
-    let alive = true;
-    Promise.all(assets.map(async (a) => [a.id, await assetUrl(a)] as const)).then((pairs) => {
-      if (alive) setUrls(new Map(pairs));
-    });
-    return () => {
-      alive = false;
-    };
-    // Only the URLs present when the page opens matter; later pictures bring their own.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  if (!urls) return <div className={s.paper} aria-busy="true" />;
-  return (
-    <PageEditorInner ref={ref} initial={initial} urls={urls} onChange={onChange} upload={upload} />
-  );
-});
-
-const PageEditorInner = forwardRef<
-  PageEditorHandle,
-  {
-    initial: string | null;
-    urls: Map<string, string>;
-    onChange: (page: string | null, text: string | null) => void;
-    upload: (file: File) => Promise<Uploaded>;
-  }
->(function PageEditorInner({ initial, urls, onChange, upload }, ref) {
+/** A page on the board: a written notebook page with its own text editor. */
+export function PageCard({
+  initial,
+  urls,
+  upload,
+  onChange,
+  onFocus,
+  onGone,
+}: {
+  /** the saved document, with picture ids instead of device paths */
+  initial: JSONContent | null;
+  urls: Map<string, string>;
+  upload: (file: File) => Promise<Uploaded>;
+  onChange: (doc: JSONContent | null, text: string) => void;
+  onFocus: (page: ActivePage) => void;
+  onGone: (editor: Editor) => void;
+}) {
   const { t } = useTranslation();
-  const onChangeRef = useRef(onChange);
-  const uploadRef = useRef(upload);
+  const callbacks = useRef({ onChange, onFocus, onGone, upload });
   useEffect(() => {
-    onChangeRef.current = onChange;
-    uploadRef.current = upload;
+    callbacks.current = { onChange, onFocus, onGone, upload };
   });
-  const content = useMemo(() => hydrateDoc(parseDoc(initial), urls), [initial, urls]);
-  const [uploading, setUploading] = useState(0);
+  // The editor owns the text after it opens; later changes flow out, never back in.
+  const [content] = useState(() => hydrateDoc(initial ?? EMPTY_DOC, urls));
+  const editorRef = useRef<Editor | null>(null);
 
   const insertFiles = async (editor: Editor, files: File[], pos?: number) => {
-    const images = files.filter(isImageFile);
-    if (!images.length) return false;
-    setUploading((n) => n + images.length);
-    try {
-      let at = pos;
-      for (const f of images) {
-        try {
-          const up = await uploadRef.current(f);
-          const node = {
-            type: 'image',
-            attrs: { src: up.url, asset: up.asset.id, alt: f.name || null },
-          };
-          const chain = editor.chain().focus();
-          if (at != null) {
-            chain.insertContentAt(at, node).run();
-            at = undefined;
-          } else {
-            chain.insertContent(node).run();
-          }
-        } catch {
-          // The upload hook already showed why (e.g. not a picture).
+    let at = pos;
+    for (const f of files.filter(isImageFile)) {
+      try {
+        const up = await callbacks.current.upload(f);
+        const node = {
+          type: 'image',
+          attrs: { src: up.url, asset: up.asset.id, alt: f.name || null },
+        };
+        const chain = editor.chain().focus();
+        if (at != null) {
+          chain.insertContentAt(at, node).run();
+          at = undefined;
+        } else {
+          chain.insertContent(node).run();
         }
+      } catch {
+        // The upload hook already showed why (e.g. not a picture).
       }
-    } finally {
-      setUploading((n) => n - images.length);
     }
-    return true;
   };
 
   const editor = useEditor({
@@ -201,54 +167,44 @@ const PageEditorInner = forwardRef<
         return false;
       },
     },
+    onFocus: ({ editor }) => {
+      callbacks.current.onFocus({
+        editor,
+        insertFiles: (files) => insertFiles(editor, files),
+      });
+    },
     onUpdate: ({ editor }) => {
-      if (editor.isEmpty) {
-        onChangeRef.current(null, null);
-        return;
-      }
-      const page = JSON.stringify(dehydrateDoc(editor.getJSON()));
       const text = editor.getText({ blockSeparator: '\n' }).trim();
-      onChangeRef.current(page, text || null);
+      callbacks.current.onChange(editor.isEmpty ? null : dehydrateDoc(editor.getJSON()), text);
     },
   });
-  const editorRef = useRef<Editor | null>(null);
   editorRef.current = editor;
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      insertImages: (items) => {
-        if (!editor) return;
-        for (const up of items) {
-          editor
-            .chain()
-            .focus()
-            .insertContent({ type: 'image', attrs: { src: up.url, asset: up.asset.id } })
-            .run();
-        }
-      },
-    }),
-    [editor],
+  useEffect(
+    () => () => {
+      if (editorRef.current) callbacks.current.onGone(editorRef.current);
+    },
+    [],
   );
 
-  if (!editor) return null;
-
+  // The board listens for keys, pastes and drops too; typing here is not for it.
+  const keep = (e: React.SyntheticEvent) => e.stopPropagation();
   return (
-    <div className={s.pageWrap}>
-      <Toolbar
-        editor={editor}
-        uploading={uploading > 0}
-        onPickImages={async () => {
-          const files = await pickImages(true);
-          if (files.length) await insertFiles(editor, files);
-        }}
-      />
-      <div className={s.paper}>
-        <EditorContent editor={editor} />
-      </div>
+    <div
+      className={cx(s.paper, s.pageCard)}
+      onKeyDown={(e) => {
+        if (e.key !== 'Escape') e.stopPropagation();
+      }}
+      onKeyUp={keep}
+      onPaste={keep}
+      onCopy={keep}
+      onCut={keep}
+      onDrop={keep}
+    >
+      <EditorContent editor={editor} />
     </div>
   );
-});
+}
 
 function ToolBtn({
   label,
@@ -279,7 +235,7 @@ function ToolBtn({
   );
 }
 
-function Toolbar({
+export function Toolbar({
   editor,
   onPickImages,
   uploading,

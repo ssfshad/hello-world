@@ -340,15 +340,7 @@
     "avgMinutes": "Avg minutes",
     "problemsAttempted": "Problems attempted",
     "count": "Count",
-    "weekdays": [
-      "Mon",
-      "Tue",
-      "Wed",
-      "Thu",
-      "Fri",
-      "Sat",
-      "Sun"
-    ]
+    "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
   },
   "insights": {
     "title": "Insights",
@@ -451,8 +443,8 @@
     "learnedCount_other": "{{count}} concepts learned",
     "welcomeTitle": "Your own notebook for every lesson",
     "welcomeBody": "Watching a lesson is only half of learning. Writing it down in your own words, with colours, drawings and examples, is what makes it stick.",
-    "welcomePage": "A page to write on, with fonts, colours and symbols",
-    "welcomeBoard": "A board to draw, doodle and arrange ideas",
+    "welcomePage": "Pages to write on, with fonts, colours and symbols",
+    "welcomeBoard": "One big canvas to draw, doodle and arrange pages, stickers and ideas",
     "welcomePhotos": "Photos of your paper notes or tablet drawings",
     "welcomeLearned": "Link the concepts you learned, for recall later",
     "titleLabel": "Lesson title",
@@ -462,7 +454,6 @@
     "courseHint": "Lessons from the same course are shelved together.",
     "coursePlaceholder": "e.g. Python Bootcamp, module 3",
     "date": "Date",
-    "views": "Lesson views",
     "backToNotebook": "Notebook",
     "notFound": "This lesson couldn't be found. It may have been deleted.",
     "saveFailed": "Not saved",
@@ -549,8 +540,6 @@
       "win": "I got it"
     },
     "page": {
-      "tab": "Page",
-      "about": "Write it in your own words. Paste or drop pictures right in.",
       "label": "Lesson page",
       "toolbar": "Formatting",
       "placeholder": "Write what this lesson was about, in your own words…",
@@ -582,16 +571,18 @@
       "uploading": "Adding picture…"
     },
     "board": {
-      "tab": "Board",
-      "about": "Draw, doodle, connect ideas with arrows, and pin stickers and photos.",
       "shelf": "Stickers and notes",
       "stickers": "Stickers",
       "notes": "Sticky notes",
       "addNote": "Add a sticky note",
       "noteText": "Write here",
       "addPhoto": "Add a photo",
-      "hint": "Use the tools at the top of the board for shapes, arrows, pen and text. Pick a shape to change its colour and font."
-    }
+      "pages": "Pages",
+      "addPage": "Add a page",
+      "writeHint": "Double-click a page on the canvas to write on it. The writing tools show up here.",
+      "hint": "Use the tools at the top of the canvas for shapes, arrows, pen and text. Double-click a page to write. Pick a shape to change its colour and font."
+    },
+    "canvasTitle": "Has notes on its canvas"
   },
   "practice": {
     "title": "Practice",

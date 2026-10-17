@@ -158,8 +158,7 @@ function LessonCard({
         <span className={s.cardExcerptEmpty}>{t('lessons.emptyLesson')}</span>
       )}
       <span className={s.cardBadges}>
-        {lesson.has_page && <span title={t('lessons.page.tab')}>📝</span>}
-        {lesson.has_board && <span title={t('lessons.board.tab')}>🎨</span>}
+        {(lesson.has_page || lesson.has_board) && <span title={t('lessons.canvasTitle')}>🎨</span>}
         {lesson.image_count > 0 && (
           <span title={t('lessons.pictures', { count: lesson.image_count })}>
             🖼️ {lesson.image_count}
