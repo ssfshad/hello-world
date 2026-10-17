@@ -14,6 +14,7 @@ import { App, queryClient } from '@/app/App';
 import { setInvoker } from '@/data/client';
 import { mockInvoke, resetMock } from '@/data/mock';
 import type { Concept, Lesson } from '@/core/types/api';
+import { useUiStore } from '@/stores/uiStore';
 import { expectNoA11yViolations } from '../a11y';
 
 const T = { timeout: 15000 };
@@ -70,6 +71,7 @@ describe('notebook lessons', () => {
   });
   beforeEach(() => {
     queryClient.clear();
+    useUiStore.getState().setLessonFilters(null);
     resetMock({ seeded: true });
     setInvoker(mockInvoke);
   });
@@ -260,5 +262,58 @@ describe('notebook lessons', () => {
     expect(await mockInvoke('lesson_asset_data', { id: (a as { id: string }).id })).toMatch(
       /^data:image\/png;base64,/,
     );
+  });
+
+  it('filters and sorts the shelf, remembers it, and clears', async () => {
+    const make = async (title: string, course: string | null, day: string) =>
+      (await mockInvoke('lesson_create', { input: { title, course, day_key: day } })) as Lesson;
+    await make('Variables', 'Python Bootcamp', '2026-09-20');
+    await make('Loops', 'Python Bootcamp', '2026-09-22');
+    await make('CSS boxes', 'Web 101', '2026-09-21');
+    await make('apples', null, '2026-09-19');
+
+    window.location.hash = '#/notebook';
+    const user = userEvent.setup();
+    const { unmount } = render(<App />);
+    await screen.findByRole('region', { name: 'Python Bootcamp' }, T);
+    expect(screen.queryByRole('group', { name: 'Filters' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Filters' }));
+    const row = screen.getByRole('group', { name: 'Filters' });
+    await expectNoA11yViolations(row);
+
+    // Course filter: only that course, with a count and a way back.
+    await user.selectOptions(within(row).getByLabelText('Course'), 'Web 101');
+    expect(await screen.findByText('Showing 1 of 4 lessons')).toBeInTheDocument();
+    expect(screen.getByText('CSS boxes')).toBeInTheDocument();
+    expect(screen.queryByText('Loops')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Filters/ })).toHaveTextContent('1');
+    expect(useUiStore.getState().lessonFilters.course).toBe('Web 101');
+
+    // Clear brings everything back.
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(await screen.findByText('Loops')).toBeInTheDocument();
+    expect(screen.queryByText(/Showing/)).not.toBeInTheDocument();
+
+    // A–Z: one flat list (no course headings, no lesson numbers), case-insensitive.
+    await user.selectOptions(
+      within(screen.getByRole('group', { name: 'Filters' })).getByLabelText('Sort'),
+      'az',
+    );
+    const list = screen.getByRole('list', { name: 'Lessons' });
+    const titles = within(list)
+      .getAllByRole('button')
+      .map((b) => b.querySelector(':scope > span:nth-of-type(3)')?.textContent);
+    expect(titles).toEqual(['apples', 'CSS boxes', 'Loops', 'Variables']);
+    expect(screen.queryByRole('region', { name: 'Python Bootcamp' })).not.toBeInTheDocument();
+    expect(within(list).queryByText(/Lesson \d/)).not.toBeInTheDocument();
+
+    // Nothing matches: a clear way out instead of the first-lesson welcome.
+    await user.selectOptions(
+      within(screen.getByRole('group', { name: 'Filters' })).getByLabelText('Contains'),
+      'pictures',
+    );
+    expect(await screen.findByText('No lessons match these filters.')).toBeInTheDocument();
+    expect(screen.queryByText('Start your first lesson')).not.toBeInTheDocument();
+    unmount();
   });
 });
