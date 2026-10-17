@@ -1,9 +1,12 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus } from 'lucide-react';
-import type { Concept, ConceptCategory } from '@/core/types/api';
-import { Button, Chip, ChipGroup, Select, TextArea, TextField, uiStyles } from '@/components/ui';
+import { useNavigate } from 'react-router-dom';
+import { BookOpenText, Plus } from 'lucide-react';
+import type { Concept, ConceptCategory, LessonSummary } from '@/core/types/api';
+import { Button, Chip, ChipGroup, Select, TextArea, TextField, toast, uiStyles } from '@/components/ui';
 import { conceptNameSchema } from '@/core/schemas';
+import { useLessonMutations, useLessons } from '@/data/queries';
+import { ConceptNotebookModal, useConceptLessons } from './ConceptNotebookModal';
 import { ExampleField } from './ExampleEditor';
 import { GlossaryText } from './GlossaryText';
 import s from './domain.module.css';
@@ -30,16 +33,23 @@ export function ConceptInput({
   onAdd,
   onPickExisting,
   busy,
+  linkToNotebook,
 }: {
   /** returns matches for the prefix */
   search: (prefix: string) => Concept[];
   categories: ConceptCategory[];
   resources?: { id: string; title: string }[];
-  onAdd: (c: NewConcept) => Promise<unknown> | void;
+  /** resolve with the created concept so it can be put in a notebook lesson */
+  onAdd: (c: NewConcept) => Promise<Concept | void> | void;
   onPickExisting?: (c: Concept) => void;
   busy?: boolean;
+  /** show "Put it in your notebook" (new or existing lesson) in the form */
+  linkToNotebook?: boolean;
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const lessonM = useLessonMutations();
+  const [notebook, setNotebook] = useState<NotebookPick>(NO_NOTEBOOK);
   const listId = useId();
   const [name, setName] = useState('');
   const [open, setOpen] = useState(false);
@@ -71,6 +81,36 @@ export function ConceptInput({
     setSourceRes('');
     setExpanded(false);
     setError(null);
+    setNotebook(NO_NOTEBOOK);
+  };
+
+  /** Link a just-saved concept to a new or existing lesson (shows on the Notebook shelf). */
+  const putInNotebook = async (c: Concept) => {
+    const pick = notebook;
+    if (pick.mode === 'none' || (pick.mode === 'existing' && !pick.lesson)) return;
+    try {
+      const lesson =
+        pick.mode === 'new'
+          ? await lessonM.create.mutateAsync({
+              title: c.name,
+              course: pick.course.trim() || null,
+              icon: '📘',
+              color: 'teal',
+              language_id: c.language_id,
+              concept_ids: [c.id],
+            })
+          : await lessonM.update.mutateAsync({
+              id: pick.lesson!.id,
+              concept_ids: [...new Set([...pick.lesson!.concept_ids, c.id])],
+            });
+      toast.info(t('conceptNotebook.added', { name: c.name, lesson: lesson.title }), {
+        label: t('conceptNotebook.openShort'),
+        onClick: () => navigate(`/notebook/lessons/${lesson.id}`),
+      });
+    } catch {
+      // the concept itself is saved; linking can be retried from its Notebook button
+      toast.error(t('conceptNotebook.linkFailed', { name: c.name }));
+    }
   };
 
   const begin = () => {
@@ -89,7 +129,7 @@ export function ConceptInput({
   };
 
   const save = async () => {
-    await onAdd({
+    const created = await onAdd({
       name: name.trim(),
       note: note.trim() || null,
       example_code: code.trim() ? code : null,
@@ -98,6 +138,7 @@ export function ConceptInput({
       source_resource_id: sourceRes || null,
       source_url: source.trim() || null,
     });
+    if (linkToNotebook && created) await putInNotebook(created);
     reset();
   };
 
@@ -227,11 +268,17 @@ export function ConceptInput({
               </div>
             )}
           </div>
+          {linkToNotebook && <NotebookChoice name={name.trim()} value={notebook} onChange={setNotebook} />}
           <div className="row" style={{ justifyContent: 'flex-end' }}>
             <Button variant="ghost" onClick={reset}>
               {t('common.cancel')}
             </Button>
-            <Button variant="primary" onClick={() => void save()} loading={busy}>
+            <Button
+              variant="primary"
+              onClick={() => void save()}
+              loading={busy || lessonM.create.isPending || lessonM.update.isPending}
+              disabled={notebook.mode === 'existing' && !notebook.lesson}
+            >
               {t('common.save')}
             </Button>
           </div>
@@ -241,32 +288,159 @@ export function ConceptInput({
   );
 }
 
+type NotebookPick =
+  | { mode: 'none' }
+  | { mode: 'new'; course: string }
+  | { mode: 'existing'; lesson: LessonSummary | null };
+
+const NO_NOTEBOOK: NotebookPick = { mode: 'none' };
+
+/** "Put it in your notebook": not now / a new lesson named after it / a lesson you already have. */
+function NotebookChoice({
+  name,
+  value,
+  onChange,
+}: {
+  name: string;
+  value: NotebookPick;
+  onChange: (v: NotebookPick) => void;
+}) {
+  const { t } = useTranslation();
+  const { data: lessons = [] } = useLessons();
+  const sorted = useMemo(() => [...lessons].sort((a, b) => b.updated_at.localeCompare(a.updated_at)), [lessons]);
+  const courses = useMemo(
+    () => [...new Set(lessons.map((l) => l.course).filter((c): c is string => !!c))].sort(),
+    [lessons],
+  );
+  const listId = useId();
+
+  return (
+    <div className="stack" style={{ gap: 8 }}>
+      <ChipGroup label={t('conceptNotebook.pickLabel')}>
+        <Chip pressed={value.mode === 'none'} onToggle={() => onChange(NO_NOTEBOOK)}>
+          {t('conceptNotebook.pickNone')}
+        </Chip>
+        <Chip pressed={value.mode === 'new'} onToggle={() => onChange({ mode: 'new', course: '' })}>
+          {t('conceptNotebook.pickNew')}
+        </Chip>
+        {lessons.length > 0 && (
+          <Chip
+            pressed={value.mode === 'existing'}
+            onToggle={() => onChange({ mode: 'existing', lesson: sorted[0] ?? null })}
+          >
+            {t('conceptNotebook.pickExisting')}
+          </Chip>
+        )}
+      </ChipGroup>
+      {value.mode === 'new' && (
+        <>
+          <TextField
+            label={t('lessons.course')}
+            hint={t('conceptNotebook.newHint', { name })}
+            placeholder={t('lessons.coursePlaceholder')}
+            list={listId}
+            value={value.course}
+            maxLength={120}
+            onChange={(e) => onChange({ mode: 'new', course: e.target.value })}
+          />
+          <datalist id={listId}>
+            {courses.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+        </>
+      )}
+      {value.mode === 'existing' && (
+        <Select
+          label={t('conceptNotebook.pickLesson')}
+          value={value.lesson?.id ?? ''}
+          onChange={(e) =>
+            onChange({ mode: 'existing', lesson: sorted.find((l) => l.id === e.target.value) ?? null })
+          }
+          options={sorted.map((l) => ({
+            value: l.id,
+            label: `${l.icon ?? '📘'} ${l.title}${l.course ? ` · ${l.course}` : ''}`,
+          }))}
+        />
+      )}
+    </div>
+  );
+}
+
 export function ConceptList({ concepts, onEdit }: { concepts: Concept[]; onEdit?: (c: Concept) => void }) {
   const { t } = useTranslation();
+  const [notebookFor, setNotebookFor] = useState<Concept | null>(null);
   if (!concepts.length) return <p className="muted">{t('today.noConcepts')}</p>;
   return (
-    <ul className={s.list}>
-      {concepts.map((c) => (
-        <li key={c.id} className={s.conceptItem}>
-          <div className="row">
-            <strong>{c.name}</strong>
-            {c.category_name && <span className={uiStyles.badge}>{c.category_name}</span>}
-            <span className="spacer" />
-            {onEdit && (
-              <Button size="sm" variant="ghost" onClick={() => onEdit(c)}>
-                {t('common.edit')}
-              </Button>
-            )}
-          </div>
-          {c.note && (
-            <p className={s.conceptNote}>
-              <GlossaryText text={c.note} />
-            </p>
-          )}
-          <ConceptExample concept={c} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className={s.list}>
+        {concepts.map((c) => (
+          <ConceptItem key={c.id} concept={c} onEdit={onEdit} onNotebook={() => setNotebookFor(c)} />
+        ))}
+      </ul>
+      {notebookFor && <ConceptNotebookModal concept={notebookFor} onClose={() => setNotebookFor(null)} />}
+    </>
+  );
+}
+
+function ConceptItem({
+  concept: c,
+  onEdit,
+  onNotebook,
+}: {
+  concept: Concept;
+  onEdit?: (c: Concept) => void;
+  onNotebook: () => void;
+}) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const lessons = useConceptLessons(c.id);
+  return (
+    <li className={s.conceptItem}>
+      <div className={s.conceptHead}>
+        <button type="button" className={s.conceptName} onClick={onNotebook} title={t('conceptNotebook.open')}>
+          {c.name}
+        </button>
+        {c.category_name && <span className={uiStyles.badge}>{c.category_name}</span>}
+        <span className="spacer" />
+        <Button
+          size="sm"
+          variant="ghost"
+          icon={<BookOpenText size={14} />}
+          onClick={onNotebook}
+          title={t('conceptNotebook.open')}
+        >
+          {t('conceptNotebook.button')}
+        </Button>
+        {onEdit && (
+          <Button size="sm" variant="ghost" onClick={() => onEdit(c)}>
+            {t('common.edit')}
+          </Button>
+        )}
+      </div>
+      {lessons.length > 0 && (
+        <div className={s.conceptLessons} aria-label={t('conceptNotebook.alreadyIn')}>
+          {lessons.map((l) => (
+            <button
+              key={l.id}
+              type="button"
+              className={s.conceptLesson}
+              onClick={() => navigate(`/notebook/lessons/${l.id}`)}
+              title={t('conceptNotebook.openLesson', { title: l.title })}
+            >
+              <span aria-hidden>{l.icon ?? '📘'}</span>
+              <span>{l.title}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {c.note && (
+        <p className={s.conceptNote}>
+          <GlossaryText text={c.note} />
+        </p>
+      )}
+      <ConceptExample concept={c} />
+    </li>
   );
 }
 

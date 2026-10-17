@@ -1013,5 +1013,26 @@
     "generating": "Building report…",
     "journeyDay": "Day {{n}} of the journey",
     "footer": "Exported from Hello World. All data stays on your device."
+  },
+  "conceptNotebook": {
+    "button": "Notebook",
+    "open": "Put this in your notebook",
+    "openLesson": "Open lesson: {{title}}",
+    "title": "“{{name}}” in your notebook",
+    "alreadyIn": "Already in",
+    "newLesson": "Start a new lesson about it",
+    "existing": "Or add it to a lesson you already have",
+    "noLessons": "You have no lessons yet. Start one above.",
+    "noOthers": "It's already in all your lessons.",
+    "addHere": "Add here",
+    "added": "Added “{{name}}” to {{lesson}}",
+    "openShort": "Open",
+    "pickLabel": "Put it in your notebook",
+    "pickNone": "Not now",
+    "pickNew": "New lesson",
+    "pickExisting": "A lesson I already have",
+    "pickLesson": "Lesson",
+    "newHint": "A lesson called “{{name}}” will appear on your Notebook shelf.",
+    "linkFailed": "“{{name}}” was saved, but it couldn't be added to the notebook. Try its Notebook button."
   }
 }

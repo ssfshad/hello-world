@@ -112,6 +112,7 @@
 }
 .cardHeader {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--s-2);
   margin-bottom: var(--s-4);
@@ -119,6 +120,8 @@
 .cardTitle {
   font-size: 1.08rem;
   font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .cardHeadline {
   font-family: var(--font-serif);

@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
+export interface LessonFilters {
+  /** '' = all courses, '__none' = lessons without a course */
+  course: string;
+  when: 'any' | '7' | '30' | '90' | '365';
+  /** '' = any concept */
+  concept: string;
+  has: 'any' | 'pictures' | 'concepts' | 'empty';
+  sort: 'course' | 'newest' | 'oldest' | 'edited' | 'az';
+}
+export const DEFAULT_LESSON_FILTERS: LessonFilters = { course: '', when: 'any', concept: '', has: 'any', sort: 'course' };
+
 interface UiState {
   /** user preference; null = automatic (collapse below 1200px) */
   sidebarCollapsed: boolean | null;
@@ -13,6 +24,9 @@ interface UiState {
   welcomeDismissed: string | null;
   /** week_start whose "week in review" card was put off */
   weekCardDismissed: string | null;
+  /** Notebook shelf filters, remembered between visits */
+  lessonFilters: LessonFilters;
+  setLessonFilters: (f: Partial<LessonFilters> | null) => void;
   setSidebarCollapsed: (v: boolean | null) => void;
   setLastPage: (p: string) => void;
   setCoachMarkSeen: () => void;
@@ -48,6 +62,9 @@ export const useUiStore = create<UiState>()(
       guideHidden: false,
       welcomeDismissed: null,
       weekCardDismissed: null,
+      lessonFilters: DEFAULT_LESSON_FILTERS,
+      setLessonFilters: (f) =>
+        set((st) => ({ lessonFilters: f ? { ...st.lessonFilters, ...f } : DEFAULT_LESSON_FILTERS })),
       setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
       setLastPage: (p) => set({ lastPage: p }),
       setCoachMarkSeen: () => set({ coachMarkSeen: true }),
@@ -66,7 +83,12 @@ export const useUiStore = create<UiState>()(
         guideHidden: s.guideHidden,
         welcomeDismissed: s.welcomeDismissed,
         weekCardDismissed: s.weekCardDismissed,
+        lessonFilters: s.lessonFilters,
       }),
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<UiState>;
+        return { ...current, ...p, lessonFilters: { ...DEFAULT_LESSON_FILTERS, ...(p.lessonFilters ?? {}) } };
+      },
     },
   ),
 );

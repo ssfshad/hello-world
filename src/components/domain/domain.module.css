@@ -655,3 +655,126 @@
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+/* ───── Pick a lesson (What I learned → Notebook) ───── */
+.pickHeading {
+  font-size: 0.87rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.pickList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pickRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-row);
+  background: var(--surface);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pickRow:hover:not(:disabled),
+.pickRow:focus-visible {
+  border-color: var(--progress);
+  background: var(--progress-tint);
+}
+.pickRow:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+.pickLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex: 1;
+  min-width: 0;
+}
+.pickLabel small {
+  display: block;
+  font-size: 0.8rem;
+}
+.pickIcon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  background: var(--cover, var(--progress-tint));
+}
+.pickTitle {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pickAction {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--progress);
+}
+
+/* "Notebook" link on a What I learned item */
+.conceptHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+.conceptName {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.conceptName:hover {
+  color: var(--progress);
+  text-decoration: underline;
+}
+.conceptLessons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.conceptLesson {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.conceptLesson:hover {
+  border-color: var(--progress);
+  color: var(--progress);
+}
+.conceptLesson span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

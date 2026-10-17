@@ -385,9 +385,10 @@ function DayPage({ dayKey }: { dayKey: string }) {
                   .slice(0, 6)
               }
               categories={categories}
+              linkToNotebook
               onAdd={async (c: NewConcept) => {
                 if (!primary) return;
-                await conceptM.add.mutateAsync({
+                return conceptM.add.mutateAsync({
                   language_id: primary.id,
                   name: c.name,
                   note: c.note,

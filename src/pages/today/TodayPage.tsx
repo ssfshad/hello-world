@@ -167,6 +167,7 @@ export default function TodayPage() {
       day_key: dayKey,
     });
     toast.info(t('today.conceptAdded', { name: created.name }));
+    return created;
   };
 
   const closeDay = () =>
@@ -285,6 +286,7 @@ export default function TodayPage() {
                   categories={categories}
                   resources={resources.map((r) => ({ id: r.id, title: r.title }))}
                   onAdd={addConcept}
+                  linkToNotebook
                   onPickExisting={(c) => toast.info(t('errors.duplicateConcept', { name: c.name }))}
                   busy={conceptM.add.isPending}
                 />

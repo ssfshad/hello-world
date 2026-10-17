@@ -40,7 +40,7 @@ export function ExampleField({
 
   return (
     <div className={s.exampleField}>
-      <div className="row">
+      <div className="row-wrap" style={{ alignItems: 'center' }}>
         <span className={uiStyles.label}>{t('today.codeLabel')}</span>
         <span className="spacer" />
         <Button
