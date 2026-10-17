@@ -51,6 +51,13 @@ There's no compiler inside. You run code wherever you already do, then paste
 the output back. Hello World tracks time, concepts, examples, problems and
 feelings.
 
+## 🆕 What's new in 1.2.1
+
+- **What I learned → Notebook:** put a new concept in a new or existing lesson as you add it.
+- **Notebook:** filters and sorting on the lessons shelf, a full-screen canvas, and page colours that fill the whole page.
+- **Practice:** problem types, extra instructions for the AI, an *All time* range, concepts grouped by category with *Select all / none*, queue filters with *Start next*, and settings that are remembered.
+- **Today:** cards no longer overflow on smaller windows.
+
 ## 📸 Screenshots
 
 <p align="center">
@@ -81,8 +88,8 @@ feelings.
 
 | | |
 |---|---|
-| 📓 **Notebook lessons** | One canvas for every lesson you watch, shelved by course. Put written **pages** on it (headings, 8 fonts including handwriting and marker, colours, highlighter, checklists, callout boxes, code blocks and 200+ symbols) and draw around them with shapes, arrows, pen, sticky notes and stickers. Add as many pages as you like. Add photos of paper notes or tablet drawings by picking, pasting or dropping them. Link the concepts you learned so they come back for recall. |
-| 🧠 **What I learned** | Each concept gets a **note** in your own words and an **example**: a full-size editor with your code on the left and the output your compiler printed on the right. |
+| 📓 **Notebook lessons** | One canvas for every lesson you watch, shelved by course. Put written **pages** on it (headings, 8 fonts including handwriting and marker, colours, highlighter, checklists, callout boxes, code blocks and 200+ symbols) and draw around them with shapes, arrows, pen, sticky notes and stickers. Give each page its own paper colour, and switch to **full screen** for more room. Add as many pages as you like. Add photos of paper notes or tablet drawings by picking, pasting or dropping them. **Filter and sort** the shelf by course, date, concept or what's inside. Link the concepts you learned so they come back for recall. |
+| 🧠 **What I learned** | Each concept gets a **note** in your own words and an **example**: a full-size editor with your code on the left and the output your compiler printed on the right. While adding it, put it straight **in your notebook**, in a new lesson or one you already have. |
 | 🎓 **Knowledge** | Every concept as your own cheat sheet, an **error journal** ("you've seen this error before, here's how you fixed it") and a **glossary** that underlines tricky words in your notes. |
 | 🧭 **Getting started** | A first-weeks checklist whose buttons take you straight to each step. After 3+ days away, a kind *welcome back* instead of a broken streak. |
 | ⏱️ **Session & problem timers** | Pause, resume, crash recovery. Late-night sessions count toward the previous day. |
@@ -92,7 +99,7 @@ feelings.
 | 📈 **Dashboard** | Streaks (one missed day a week is a free **rest day**), heatmap, mood vs usefulness, and solved problems split into **alone · with help**. |
 | 🔁 **Recall review** | Concepts come back at 1 → 3 → 7 → 14 → 30 → 60 days. Remember first, then reveal your own note and rate *Forgot / Fuzzy / Got it*. |
 | 🗓️ **Weekly review** | A two-minute look back drafted from your log, plus one focus for next week that stays on Today. |
-| 🤖 **Practice generator** | Copy-prompt mode (free), or Ollama / OpenAI-compatible / Gemini / Anthropic / OpenRouter. Includes **mini projects**, and an **I'm stuck** button that copies a hints-only prompt (never the answer). |
+| 🤖 **Practice generator** | Builds a prompt from your own concepts to paste into ChatGPT or Gemini (free), or sends it to Ollama / OpenAI-compatible / Gemini / Anthropic / OpenRouter. Choose **problem types** (write the code, predict the output, find the bug, fill in the blanks, multiple choice), add **extra instructions** like *"explain in Bangla"*, and pick concepts by category or from **all time**. Includes **mini projects**, and an **I'm stuck** button that copies a hints-only prompt (never the answer). Your setup is remembered. |
 | 💬 **Insights** | *"You've been here before"*, comeback stories, a warning when you only watch tutorials, milestones. |
 | 📚 **Library & roadmaps** | Your links, notes and files; roadmaps you build yourself or import. |
 | ✉️ **Letters to future you** | Sealed until the day you choose. |
