@@ -201,6 +201,14 @@
 }
 
 /* Practice */
+.practiceEmpty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-card);
+}
 .practice {
   display: grid;
   grid-template-columns: 380px minmax(0, 1fr);

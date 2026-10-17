@@ -1,4 +1,4 @@
-import { useId, useRef } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import s from './ui.module.css';
 
@@ -6,10 +6,13 @@ export function DifficultyPicker({
   value,
   onChange,
   label,
+  labelExtra,
 }: {
   value: number | null;
   onChange: (v: number) => void;
   label?: string;
+  /** shown right after the label, e.g. an info tooltip */
+  labelExtra?: ReactNode;
 }) {
   const { t } = useTranslation();
   const id = useId();
@@ -17,8 +20,11 @@ export function DifficultyPicker({
   const focusIdx = value ? value - 1 : 0;
   return (
     <div className="stack" style={{ gap: 6 }}>
-      <span id={id} className={s.label}>
-        {label ?? t('problem.difficulty')}
+      <span className="row" style={{ gap: 6 }}>
+        <span id={id} className={s.label}>
+          {label ?? t('problem.difficulty')}
+        </span>
+        {labelExtra}
       </span>
       <div role="radiogroup" aria-labelledby={id} className={s.diff}>
         {[1, 2, 3, 4, 5].map((n, i) => (

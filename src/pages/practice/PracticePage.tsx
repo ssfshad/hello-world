@@ -33,11 +33,17 @@ import {
 import { call } from '@/data/client';
 import { copyText } from '@/data/platform';
 import { addDays } from '@/lib/day';
-import type { GenerateResult, PracticeConfig, ProblemStyle } from '@/core/types/api';
+import type { Concept, GenerateResult, PracticeConfig, ProblemStyle } from '@/core/types/api';
+import { useUiStore, type PracticeSettings } from '@/stores/uiStore';
 import s from '../pages.module.css';
 import d from '@/components/domain/domain.module.css';
 
-type RangeKind = 'today' | '3' | '7' | 'custom';
+type RangeKind = PracticeSettings['range'];
+type QueueStatus = '' | 'queued' | 'in_progress' | 'revisit';
+
+/** Concepts without a category are grouped under this key. */
+const NO_CATEGORY = '__none';
+const catOf = (c: Concept) => c.category_name ?? NO_CATEGORY;
 
 export default function PracticePage() {
   const { t } = useTranslation();
@@ -47,21 +53,33 @@ export default function PracticePage() {
   const today = app?.today ?? '';
   const preselect = params.get('concept');
 
-  const [rangeKind, setRangeKind] = useState<RangeKind>('7');
+  // The setup is remembered between visits.
+  const settings = useUiStore((st) => st.practiceSettings);
+  const setSettings = useUiStore((st) => st.setPracticeSettings);
+  const { difficulty, count, style, mode, struggles } = settings;
   /** Opened from "Practice" on a review item: list every concept so it can be preselected. */
-  const [allTime, setAllTime] = useState(!!preselect);
-  const [customFrom, setCustomFrom] = useState(() => addDays(today || '2026-01-01', -29));
-  const [customTo, setCustomTo] = useState(today);
+  const [rangeOverride, setRangeOverride] = useState<RangeKind | null>(preselect ? 'all' : null);
+  const rangeKind = rangeOverride ?? settings.range;
+  const allTime = rangeKind === 'all';
+  const customTo = settings.customTo && settings.customTo <= today ? settings.customTo : today;
+  const customFrom =
+    settings.customFrom && settings.customFrom <= customTo
+      ? settings.customFrom
+      : addDays(customTo || '2026-01-01', -29);
   const [langId, setLangId] = useState<string>('');
   const [selected, setSelected] = useState<string[] | null>(preselect ? [preselect] : null);
-  const [difficulty, setDifficulty] = useState(2);
-  const [count, setCount] = useState(3);
-  const [style, setStyle] = useState<ProblemStyle>(() => (params.get('style') === 'project' ? 'project' : 'beginner'));
-  const [mode, setMode] = useState<'copy_prompt' | 'api'>('copy_prompt');
-  const [struggles, setStruggles] = useState(false);
+  const [category, setCategory] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [generated, setGenerated] = useState<GenerateResult | null>(null);
+  const [queueStatus, setQueueStatus] = useState<QueueStatus>('');
+  const [queueLevel, setQueueLevel] = useState('');
+
+  // "Mini project" links from elsewhere pick that style.
+  const styleParam = params.get('style');
+  useEffect(() => {
+    if (styleParam === 'project') setSettings({ style: 'project' });
+  }, [styleParam, setSettings]);
 
   const primary = app?.languages.find((l) => l.is_primary) ?? app?.languages[0];
   const language = langId || primary?.id || '';
@@ -69,9 +87,17 @@ export default function PracticePage() {
   const range = useMemo(() => {
     if (rangeKind === 'today') return { from: today, to: today };
     if (rangeKind === '3') return { from: addDays(today, -2), to: today };
-    if (rangeKind === '7') return { from: addDays(today, -6), to: today };
-    return { from: customFrom, to: customTo };
+    if (rangeKind === 'custom') return { from: customFrom, to: customTo };
+    // "All time" still needs a range for the report buttons; the concept list ignores it.
+    return { from: addDays(today, -6), to: today };
   }, [rangeKind, today, customFrom, customTo]);
+
+  const pickRange = (k: RangeKind) => {
+    setRangeOverride(null);
+    setSettings({ range: k });
+    setSelected(null);
+    setCategory('');
+  };
 
   const { data: rangeConcepts = [] } = useConcepts(allTime ? null : range, language || null);
   const { data: providers = [] } = useProviders();
@@ -86,7 +112,28 @@ export default function PracticePage() {
   useEffect(() => {
     if (selected === null && rangeConcepts.length) setSelected(rangeConcepts.map((c) => c.id));
   }, [rangeConcepts, selected]);
-  const conceptIds = (selected ?? []).filter((id) => rangeConcepts.some((c) => c.id === id));
+
+  // Concepts grouped by category; the category filter narrows what's sent too.
+  const categories = useMemo(
+    () =>
+      [...new Set(rangeConcepts.map(catOf))].sort((a, b) =>
+        a === NO_CATEGORY ? 1 : b === NO_CATEGORY ? -1 : a.localeCompare(b),
+      ),
+    [rangeConcepts],
+  );
+  const catLabel = (c: string) => (c === NO_CATEGORY ? t('practice.noCategory') : c);
+  const visible = category ? rangeConcepts.filter((c) => catOf(c) === category) : rangeConcepts;
+  const conceptIds = (selected ?? []).filter((id) => visible.some((c) => c.id === id));
+  const setAll = (on: boolean) => {
+    const ids = new Set(visible.map((c) => c.id));
+    const rest = (selected ?? []).filter((id) => !ids.has(id));
+    setSelected(on ? [...rest, ...ids] : rest);
+  };
+
+  const filteredQueue = queue.filter(
+    (p) => (!queueStatus || p.status === queueStatus) && (!queueLevel || String(p.difficulty) === queueLevel),
+  );
+  const next = filteredQueue.find((p) => p.status !== 'in_progress') ?? filteredQueue[0];
 
   const defaultProvider = providers.find((p) => p.is_default) ?? providers[0];
   const config: PracticeConfig | null = language
@@ -138,46 +185,86 @@ export default function PracticePage() {
                   ['today', t('practice.today')],
                   ['3', t('practice.last3')],
                   ['7', t('practice.last7')],
+                  ['all', t('practice.allTime')],
                   ['custom', t('practice.custom')],
                 ] as [RangeKind, string][]
               ).map(([k, label]) => (
-                <Chip
-                  key={k}
-                  pressed={!allTime && rangeKind === k}
-                  onToggle={() => {
-                    setRangeKind(k);
-                    setAllTime(false);
-                    setSelected(null);
-                  }}
-                >
+                <Chip key={k} pressed={rangeKind === k} onToggle={() => pickRange(k)}>
                   {label}
                 </Chip>
               ))}
             </ChipGroup>
-            {!allTime && rangeKind === 'custom' && (
+            {rangeKind === 'custom' && (
               <div className="row">
-                <TextField label={t('practice.from')} type="date" value={customFrom} max={customTo} onChange={(e) => { setCustomFrom(e.target.value); setSelected(null); }} />
-                <TextField label={t('practice.to')} type="date" value={customTo} min={customFrom} max={today} onChange={(e) => { setCustomTo(e.target.value); setSelected(null); }} />
+                <TextField label={t('practice.from')} type="date" value={customFrom} max={customTo} onChange={(e) => { setSettings({ customFrom: e.target.value }); setSelected(null); }} />
+                <TextField label={t('practice.to')} type="date" value={customTo} min={customFrom} max={today} onChange={(e) => { setSettings({ customTo: e.target.value }); setSelected(null); }} />
               </div>
             )}
             {rangeConcepts.length === 0 ? (
-              <p className="muted">{t('practice.noConcepts')}</p>
+              <div className={s.practiceEmpty} role="status">
+                <p className="muted" style={{ margin: 0 }}>
+                  {allTime ? t('practice.noConceptsAtAll') : t('practice.noConceptsInRange')}
+                </p>
+                <div className="row-wrap">
+                  {!allTime && (
+                    <Button size="sm" variant="primary" onClick={() => pickRange('all')}>
+                      {t('practice.tryAllTime')}
+                    </Button>
+                  )}
+                  <Button size="sm" onClick={() => navigate('/today')}>
+                    {t('practice.logOnToday')}
+                  </Button>
+                </div>
+              </div>
             ) : (
-              <ChipGroup label={t('problem.concepts')} hideLabel>
-                {rangeConcepts.map((c) => {
-                  const on = conceptIds.includes(c.id);
+              <div className="stack" style={{ gap: 8 }}>
+                <div className="row-wrap" style={{ alignItems: 'flex-end' }}>
+                  {categories.length > 1 && (
+                    <div style={{ flex: 1, minWidth: 150 }}>
+                      <Select
+                        label={t('practice.category')}
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        options={[
+                          { value: '', label: t('practice.allCategories') },
+                          ...categories.map((c) => ({ value: c, label: catLabel(c) })),
+                        ]}
+                      />
+                    </div>
+                  )}
+                  <span className="spacer" />
+                  <Button size="sm" variant="ghost" onClick={() => setAll(true)} disabled={conceptIds.length === visible.length}>
+                    {t('practice.selectAll')}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setAll(false)} disabled={conceptIds.length === 0}>
+                    {t('practice.selectNone')}
+                  </Button>
+                </div>
+                {(category ? [category] : categories).map((cat) => {
+                  const items = visible.filter((c) => catOf(c) === cat);
+                  if (!items.length) return null;
                   return (
-                    <Chip key={c.id} pressed={on} onToggle={() => setSelected(on ? conceptIds.filter((x) => x !== c.id) : [...conceptIds, c.id])}>
-                      {c.name}
-                    </Chip>
+                    <ChipGroup key={cat} label={catLabel(cat)} hideLabel={categories.length < 2}>
+                      {items.map((c) => {
+                        const on = conceptIds.includes(c.id);
+                        return (
+                          <Chip key={c.id} pressed={on} onToggle={() => setSelected(on ? (selected ?? []).filter((x) => x !== c.id) : [...(selected ?? []), c.id])}>
+                            {c.name}
+                          </Chip>
+                        );
+                      })}
+                    </ChipGroup>
                   );
                 })}
-              </ChipGroup>
+                <small className="muted">{t('practice.selectedCount', { count: conceptIds.length, total: visible.length })}</small>
+              </div>
             )}
 
-            <div className="stack" style={{ gap: 6 }}>
-              <div className="row">
-                <span style={{ flex: 1 }} />
+            <DifficultyPicker
+              value={difficulty}
+              onChange={(v) => setSettings({ difficulty: v })}
+              label={t('practice.difficulty')}
+              labelExtra={
                 <Tooltip
                   content={[1, 2, 3, 4, 5].map((n) => (
                     <div key={n}>
@@ -185,18 +272,17 @@ export default function PracticePage() {
                     </div>
                   ))}
                 >
-                  <Info size={16} tabIndex={0} aria-label={t('practice.difficulty')} color="var(--muted)" />
+                  <Info size={15} tabIndex={0} aria-label={t('practice.difficultyHelp')} color="var(--muted)" />
                 </Tooltip>
-              </div>
-              <DifficultyPicker value={difficulty} onChange={setDifficulty} label={t('practice.difficulty')} />
-            </div>
+              }
+            />
 
             <div className="row">
               <div style={{ width: 110 }}>
                 <Select
                   label={t('practice.howMany')}
                   value={String(count)}
-                  onChange={(e) => setCount(Number(e.target.value))}
+                  onChange={(e) => setSettings({ count: Number(e.target.value) })}
                   options={Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))}
                 />
               </div>
@@ -204,7 +290,7 @@ export default function PracticePage() {
                 <Select
                   label={t('practice.style')}
                   value={style}
-                  onChange={(e) => setStyle(e.target.value as ProblemStyle)}
+                  onChange={(e) => setSettings({ style: e.target.value as ProblemStyle })}
                   options={(['beginner', 'story', 'cf', 'project'] as const).map((v) => ({ value: v, label: t(`practice.styles.${v}`) }))}
                 />
               </div>
@@ -221,7 +307,7 @@ export default function PracticePage() {
                     ['api', t('practice.apiMode'), defaultProvider ? `${defaultProvider.label} · ${defaultProvider.model}` : t('practice.apiModeHint')],
                   ] as const
                 ).map(([v, label, hint]) => (
-                  <button key={v} type="button" role="radio" aria-checked={mode === v} className={s.modeBtn} onClick={() => setMode(v)}>
+                  <button key={v} type="button" role="radio" aria-checked={mode === v} className={s.modeBtn} onClick={() => setSettings({ mode: v })}>
                     <strong>{label}</strong>
                     <small>{hint}</small>
                   </button>
@@ -238,7 +324,7 @@ export default function PracticePage() {
             </div>
 
             <label className="row" style={{ alignItems: 'flex-start', cursor: 'pointer' }}>
-              <input type="checkbox" checked={struggles} onChange={(e) => setStruggles(e.target.checked)} style={{ width: 18, height: 18, marginTop: 3, accentColor: 'var(--progress)' }} />
+              <input type="checkbox" checked={struggles} onChange={(e) => setSettings({ struggles: e.target.checked })} style={{ width: 18, height: 18, marginTop: 3, accentColor: 'var(--progress)' }} />
               <span>
                 {t('practice.struggles')}
                 <br />
@@ -259,9 +345,13 @@ export default function PracticePage() {
           >
             <div className="stack">
               {mode === 'api' && <p className="muted" style={{ fontSize: '0.85rem' }}>{t('practice.showPrompt')}</p>}
-              <pre className={[s.prompt, expanded && s.promptOpen].filter(Boolean).join(' ')} aria-busy={building} tabIndex={0}>
-                {built?.prompt ?? (conceptIds.length ? t('app.loading') : t('practice.noConcepts'))}
-              </pre>
+              {conceptIds.length ? (
+                <pre className={[s.prompt, expanded && s.promptOpen].filter(Boolean).join(' ')} aria-busy={building} tabIndex={0}>
+                  {built?.prompt ?? t('app.loading')}
+                </pre>
+              ) : (
+                <EmptyState icon={<Sparkles size={22} />}>{t('practice.pickConceptsFirst')}</EmptyState>
+              )}
               <div className="row-wrap">
                 {mode === 'copy_prompt' ? (
                   <>
@@ -302,12 +392,55 @@ export default function PracticePage() {
             </div>
           </Card>
 
-          <Card title={t('practice.queue')}>
+          <Card
+            title={t('practice.queue')}
+            actions={
+              next && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  icon={<Play size={14} />}
+                  title={next.title}
+                  onClick={() => timer.attemptStart.mutate(next.id, { onSuccess: () => navigate('/today') })}
+                >
+                  {t('practice.startNext')}
+                </Button>
+              )
+            }
+          >
+            {queue.length > 0 && (
+              <div className="row-wrap" style={{ marginBottom: 12 }}>
+                <div style={{ minWidth: 150 }}>
+                  <Select
+                    label={t('practice.queueStatus')}
+                    value={queueStatus}
+                    onChange={(e) => setQueueStatus(e.target.value as QueueStatus)}
+                    options={[
+                      { value: '', label: t('practice.anyStatus') },
+                      ...(['queued', 'in_progress', 'revisit'] as const).map((v) => ({ value: v, label: t(`status.${v}`) })),
+                    ]}
+                  />
+                </div>
+                <div style={{ minWidth: 120 }}>
+                  <Select
+                    label={t('practice.queueLevel')}
+                    value={queueLevel}
+                    onChange={(e) => setQueueLevel(e.target.value)}
+                    options={[
+                      { value: '', label: t('practice.anyLevel') },
+                      ...[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: t('common.level', { n }) })),
+                    ]}
+                  />
+                </div>
+              </div>
+            )}
             {queue.length === 0 ? (
               <EmptyState icon={<Sparkles size={22} />}>{t('practice.queueEmpty')}</EmptyState>
+            ) : filteredQueue.length === 0 ? (
+              <EmptyState icon={<Sparkles size={22} />}>{t('practice.queueNoMatch')}</EmptyState>
             ) : (
               <ul className={d.list}>
-                {queue.map((p) => (
+                {filteredQueue.map((p) => (
                   <li key={p.id} className={[d.row, p.flagged_bad && d.flagged].filter(Boolean).join(' ')}>
                     <span className={[d.dot, d[`dot_${p.status}`]].join(' ')} aria-hidden="true" />
                     <div className={d.rowMain}>
