@@ -74,9 +74,12 @@ export function PageCard({
   onChange,
   onFocus,
   onGone,
+  paper,
 }: {
   /** the saved document, with picture ids instead of device paths */
   initial: JSONContent | null;
+  /** the card's background colour picked on the board ('transparent' = plain paper) */
+  paper?: string;
   urls: Map<string, string>;
   upload: (file: File) => Promise<Uploaded>;
   onChange: (doc: JSONContent | null, text: string) => void;
@@ -192,6 +195,8 @@ export function PageCard({
   return (
     <div
       className={cx(s.paper, s.pageCard)}
+      data-paper={paper && paper !== 'transparent' ? '' : undefined}
+      style={paper && paper !== 'transparent' ? ({ '--page-bg': paper } as React.CSSProperties) : undefined}
       onKeyDown={(e) => {
         if (e.key !== 'Escape') e.stopPropagation();
       }}

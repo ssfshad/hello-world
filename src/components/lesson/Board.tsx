@@ -33,9 +33,9 @@ import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types';
 import '@excalidraw/excalidraw/index.css';
 import type { JSONContent } from '@tiptap/core';
 import type { Editor } from '@tiptap/react';
-import { FilePlus2, ImagePlus, StickyNote } from 'lucide-react';
+import { FilePlus2, ImagePlus, Maximize2, Minimize2, StickyNote } from 'lucide-react';
 import { call, toAppError } from '@/data/client';
-import { toast } from '@/components/ui';
+import { cx, toast } from '@/components/ui';
 import { SymbolPicker } from './SymbolPicker';
 import { assetUrl, pickImages } from './images';
 import { PageCard, Toolbar, type ActivePage, type Uploaded } from './PageEditor';
@@ -154,6 +154,8 @@ export const Board = forwardRef<
   const urls = useRef(new Map<string, string>());
   const [active, setActive] = useState<ActivePage | null>(null);
   const [busy, setBusy] = useState(0);
+  /** the board fills the whole window, for more room to draw and write */
+  const [full, setFull] = useState(false);
   const seq = useRef(0);
   const lastVersion = useRef<number>(-1);
   const lastBg = useRef<string | undefined>(undefined);
@@ -475,6 +477,23 @@ export const Board = forwardRef<
 
   useImperativeHandle(ref, () => ({ insertImages }));
 
+  // Esc leaves full screen, unless it's closing something inside the board first.
+  useEffect(() => {
+    if (!full) return;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.key !== 'Escape' || el?.closest('[contenteditable="true"], input, textarea')) return;
+      if (api && Object.keys(api.getAppState().selectedElementIds).length) return;
+      setFull(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [full, api]);
+  // The canvas measures itself; tell it the frame changed size.
+  useEffect(() => {
+    api?.refresh();
+  }, [full, api]);
+
   const uploadRef = useRef(upload);
   useEffect(() => {
     uploadRef.current = upload;
@@ -493,12 +512,13 @@ export const Board = forwardRef<
 
   /** Draws each written-page card. Only cards with a page link are ever valid embeds. */
   const renderEmbeddable = useCallback(
-    (el: { link: string | null }) => {
+    (el: { link: string | null; backgroundColor: string }) => {
       const id = pageIdOf(el);
       if (!id) return null;
       return (
         <PageCard
           initial={pages.current.get(id)?.doc ?? null}
+          paper={el.backgroundColor}
           urls={urls.current}
           upload={pageUpload}
           onChange={(doc, text) => {
@@ -531,7 +551,7 @@ export const Board = forwardRef<
   if (!initialData) return <div className={s.boardWrap} aria-busy="true" />;
 
   return (
-    <div className={s.boardOuter} data-no-app-shortcuts="">
+    <div className={cx(s.boardOuter, full && s.boardFull)} data-no-app-shortcuts="">
       {active && !active.editor.isDestroyed ? (
         <Toolbar
           editor={active.editor}
@@ -548,6 +568,16 @@ export const Board = forwardRef<
       )}
       <div className={s.boardWrap}>
         <div className={s.shelf} role="toolbar" aria-label={t('lessons.board.shelf')}>
+          <button
+            type="button"
+            className={s.shelfPhoto}
+            aria-pressed={full}
+            title={full ? t('lessons.board.exitFullHint') : undefined}
+            onClick={() => setFull((f) => !f)}
+          >
+            {full ? <Minimize2 size={15} /> : <Maximize2 size={15} />}{' '}
+            {full ? t('lessons.board.exitFull') : t('lessons.board.full')}
+          </button>
           <span className={s.shelfTitle}>{t('lessons.board.pages')}</span>
           <button type="button" className={s.shelfPhoto} onClick={addPage}>
             <FilePlus2 size={16} /> {t('lessons.board.addPage')}

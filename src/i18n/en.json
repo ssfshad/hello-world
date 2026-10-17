@@ -578,6 +578,9 @@
       "noteText": "Write here",
       "addPhoto": "Add a photo",
       "pages": "Pages",
+      "full": "Full screen",
+      "exitFull": "Exit full screen",
+      "exitFullHint": "Or press Esc",
       "addPage": "Add a page",
       "writeHint": "Double-click a page on the canvas to write on it. The writing tools show up here.",
       "hint": "Use the tools at the top of the canvas for shapes, arrows, pen and text. Double-click a page to write. Pick a shape to change its colour and font."

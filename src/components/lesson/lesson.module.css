@@ -13,8 +13,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--s-2);
-  padding: 6px;
+  gap: 6px;
+  padding: 4px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-card);
@@ -34,9 +34,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 32px;
-  height: 32px;
-  padding: 0 6px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 5px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
@@ -62,14 +62,14 @@
   border-color: color-mix(in srgb, var(--progress) 30%, transparent);
 }
 .toolSelect {
-  height: 32px;
+  height: 28px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: 0.85rem;
-  padding: 0 6px;
+  font-size: 0.8rem;
+  padding: 0 4px;
   cursor: pointer;
 }
 .toolSelect:focus-visible {
@@ -229,8 +229,8 @@
   font-family: var(--font-sans), 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif;
 }
 .symbolGridBig .symbol {
-  font-size: 1.4rem;
-  height: 40px;
+  font-size: 1.15rem;
+  height: 32px;
 }
 .symbol:hover,
 .symbol:focus-visible {
@@ -448,19 +448,32 @@
 }
 .textBarHint {
   margin: 0;
-  padding: 10px 14px;
+  padding: 6px 12px;
   background: var(--surface);
   border: 1px dashed var(--line);
   border-radius: var(--r-card);
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
 }
 .boardWrap {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 196px minmax(0, 1fr);
   gap: var(--s-3);
   /* Fill the window below the lesson header. */
-  height: max(620px, calc(100vh - 300px));
+  height: max(620px, calc(100vh - 220px));
+}
+/* Full screen: the board covers the whole window (dialogs still open above it). */
+.boardFull {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  padding: var(--s-3);
+  background: var(--bg);
+}
+.boardFull .boardWrap {
+  flex: 1;
+  min-height: 0;
+  height: auto;
 }
 /* A written page sitting on the board. */
 .pageCard {
@@ -474,6 +487,13 @@
   user-select: text;
   cursor: text;
 }
+/* A colour picked for the card on the board fills the whole page. */
+.pageCard[data-paper] {
+  background-color: var(--page-bg);
+}
+:global([data-theme='dark']) .pageCard[data-paper] {
+  background-color: color-mix(in srgb, var(--page-bg) 28%, var(--surface-warm));
+}
 .pageCard :global(.lesson-page) {
   max-width: none;
   min-height: 100%;
@@ -482,12 +502,13 @@
 .shelf {
   display: flex;
   flex-direction: column;
-  gap: var(--s-2);
-  padding: var(--s-3);
+  gap: 6px;
+  padding: var(--s-2) var(--s-3);
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-card);
   overflow-y: auto;
+  font-size: 0.88rem;
 }
 .shelf .symbols {
   width: auto;
@@ -529,7 +550,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px;
+  padding: 6px 8px;
   border: 1px dashed var(--input-border);
   border-radius: 10px;
   background: var(--bg);
@@ -546,7 +567,7 @@
   color: var(--progress);
 }
 .shelfHint {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--muted);
   line-height: 1.45;
 }
