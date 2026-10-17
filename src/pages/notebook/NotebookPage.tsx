@@ -1,9 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Pencil, Search } from 'lucide-react';
 import { PageHeader } from '@/app/PageHeader';
-import { Badge, Button, Card, EmptyState, IconButton, Select, TextField } from '@/components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  IconButton,
+  Select,
+  Tabs,
+  TextField,
+} from '@/components/ui';
 import { DiaryCard } from '@/components/domain/DiaryCard';
 import { UsefulnessCard } from '@/components/domain/UsefulnessCard';
 import { ConceptInput, ConceptList, type NewConcept } from '@/components/domain/ConceptInput';
@@ -26,6 +35,8 @@ import { monthGrid } from '@/lib/day';
 import { formatDay, formatDuration, formatTime, formatMinutes, pad2 } from '@/lib/format';
 import type { Concept, DailyPoint, SearchKind } from '@/core/types/api';
 import s from '../pages.module.css';
+import n from './notebook.module.css';
+import { LessonsTab } from './LessonsTab';
 
 function moodColor(mood: number | null): string | undefined {
   if (mood == null) return undefined;
@@ -33,7 +44,40 @@ function moodColor(mood: number | null): string | undefined {
   return `color-mix(in srgb, var(--feeling) ${pct}%, var(--surface))`;
 }
 
+type NotebookTab = 'lessons' | 'days';
+
+/**
+ * The Notebook: your lessons (pages and boards you make) and your days (the
+ * log you reread). A day link (/notebook/:day) opens the Days tab.
+ */
 export default function NotebookPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const params = useParams();
+  const [search] = useSearchParams();
+  const tab: NotebookTab = params.day || search.get('tab') === 'days' ? 'days' : 'lessons';
+  return (
+    <>
+      <PageHeader context={t('notebook.context')} title={t('notebook.title')} />
+      <div className={n.tabs}>
+        <Tabs<NotebookTab>
+          label={t('notebook.title')}
+          value={tab}
+          onChange={(v) =>
+            navigate(v === 'days' ? '/notebook?tab=days' : '/notebook', { replace: true })
+          }
+          options={[
+            { value: 'lessons', label: t('notebook.tabs.lessons') },
+            { value: 'days', label: t('notebook.tabs.days') },
+          ]}
+        />
+      </div>
+      {tab === 'lessons' ? <LessonsTab /> : <DaysTab />}
+    </>
+  );
+}
+
+function DaysTab() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const params = useParams();
@@ -69,10 +113,21 @@ export default function NotebookPage() {
     if ((moodMin > 1 || moodMax < 5) && p?.mood_avg == null) return false;
     if (filterConcept) {
       const learned = concepts.some((c) => c.id === filterConcept && c.learned_day_key === day);
-      const practiced = problems.some((pr) => pr.concept_ids.includes(filterConcept) && (pr.day_key === day || pr.created_day_key === day));
+      const practiced = problems.some(
+        (pr) =>
+          pr.concept_ids.includes(filterConcept) &&
+          (pr.day_key === day || pr.created_day_key === day),
+      );
       if (!learned && !practiced) return false;
     }
-    if (filterFeeling && !problems.some((pr) => pr.feeling_tag_id === filterFeeling && (pr.day_key === day || pr.created_day_key === day))) return false;
+    if (
+      filterFeeling &&
+      !problems.some(
+        (pr) =>
+          pr.feeling_tag_id === filterFeeling && (pr.day_key === day || pr.created_day_key === day),
+      )
+    )
+      return false;
     return true;
   };
   const filtering = !!filterConcept || !!filterFeeling || moodMin > 1 || moodMax < 5;
@@ -88,11 +143,12 @@ export default function NotebookPage() {
 
   return (
     <>
-      <PageHeader context={t('notebook.context')} title={t('notebook.title')} />
       <div className={s.notebook}>
         <div className="stack" style={{ gap: 20 }}>
           <Card
-            title={new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(new Date(month.y, month.m, 1))}
+            title={new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(
+              new Date(month.y, month.m, 1),
+            )}
             actions={
               <div className="row">
                 <IconButton aria-label={t('notebook.prevMonth')} onClick={() => shiftMonth(-1)}>
@@ -127,13 +183,19 @@ export default function NotebookPage() {
                     aria-label={t('notebook.dayCell', {
                       date: formatDay(day, { month: 'long', day: 'numeric' }),
                       time: formatMinutes(minutes),
-                      mood: p?.mood_avg != null ? t('notebook.moodSuffix', { mood: p.mood_avg }) : '',
+                      mood:
+                        p?.mood_avg != null ? t('notebook.moodSuffix', { mood: p.mood_avg }) : '',
                     })}
                     onClick={() => navigate(`/notebook/${day}`)}
                   >
-                    <span className={s.calFill} style={{ height: `${Math.min(100, (minutes / goal) * 100)}%` }} />
+                    <span
+                      className={s.calFill}
+                      style={{ height: `${Math.min(100, (minutes / goal) * 100)}%` }}
+                    />
                     <span className={s.calNum}>{Number(day.slice(8))}</span>
-                    {p?.mood_avg != null && <span className={s.calMood} style={{ background: moodColor(p.mood_avg) }} />}
+                    {p?.mood_avg != null && (
+                      <span className={s.calMood} style={{ background: moodColor(p.mood_avg) }} />
+                    )}
                   </button>
                 );
               })}
@@ -146,32 +208,47 @@ export default function NotebookPage() {
                 label={t('common.language')}
                 value={filterLang}
                 onChange={(e) => setFilterLang(e.target.value)}
-                options={[{ value: '', label: t('common.allLanguages') }, ...app.languages.map((l) => ({ value: l.id, label: l.name }))]}
+                options={[
+                  { value: '', label: t('common.allLanguages') },
+                  ...app.languages.map((l) => ({ value: l.id, label: l.name })),
+                ]}
               />
               <Select
                 label={t('notebook.filterConcept')}
                 value={filterConcept}
                 onChange={(e) => setFilterConcept(e.target.value)}
-                options={[{ value: '', label: t('common.all') }, ...concepts.map((c) => ({ value: c.id, label: c.name }))]}
+                options={[
+                  { value: '', label: t('common.all') },
+                  ...concepts.map((c) => ({ value: c.id, label: c.name })),
+                ]}
               />
               <Select
                 label={t('notebook.filterFeeling')}
                 value={filterFeeling}
                 onChange={(e) => setFilterFeeling(e.target.value)}
-                options={[{ value: '', label: t('common.all') }, ...feelings.map((f) => ({ value: f.id, label: f.name }))]}
+                options={[
+                  { value: '', label: t('common.all') },
+                  ...feelings.map((f) => ({ value: f.id, label: f.name })),
+                ]}
               />
               <div className="row">
                 <Select
                   label={`${t('notebook.filterMood')} min`}
                   value={String(moodMin)}
                   onChange={(e) => setMoodMin(Number(e.target.value))}
-                  options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n} · ${t(`mood.${n}`)}` }))}
+                  options={[1, 2, 3, 4, 5].map((n) => ({
+                    value: String(n),
+                    label: `${n} · ${t(`mood.${n}`)}`,
+                  }))}
                 />
                 <Select
                   label={`${t('notebook.filterMood')} max`}
                   value={String(moodMax)}
                   onChange={(e) => setMoodMax(Number(e.target.value))}
-                  options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n} · ${t(`mood.${n}`)}` }))}
+                  options={[1, 2, 3, 4, 5].map((n) => ({
+                    value: String(n),
+                    label: `${n} · ${t(`mood.${n}`)}`,
+                  }))}
                 />
               </div>
             </div>
@@ -194,13 +271,17 @@ export default function NotebookPage() {
                 onChange={(e) => setKinds(e.target.value as SearchKind | '')}
                 options={[
                   { value: '', label: t('common.all') },
-                  ...(['diary', 'concept', 'problem', 'resource', 'error'] as const).map((k) => ({ value: k, label: t(`notebook.kinds.${k}`) })),
+                  ...(['lesson', 'diary', 'concept', 'problem', 'resource', 'error'] as const).map(
+                    (k) => ({ value: k, label: t(`notebook.kinds.${k}`) }),
+                  ),
                 ]}
               />
               {query.trim().length >= 2 && (
                 <>
                   <p className="muted" role="status" style={{ fontSize: '0.83rem' }}>
-                    {hits.length ? t('notebook.searchResults', { count: hits.length }) : t('notebook.noResults')}
+                    {hits.length
+                      ? t('notebook.searchResults', { count: hits.length })
+                      : t('notebook.noResults')}
                   </p>
                   <ul className={s.hits}>
                     {hits.map((h) => (
@@ -209,18 +290,24 @@ export default function NotebookPage() {
                           type="button"
                           className={s.hit}
                           onClick={() =>
-                            h.kind === 'resource'
-                              ? navigate('/library')
-                              : h.kind === 'error'
-                                ? navigate(`/knowledge?tab=errors&focus=${h.ref_id}`)
-                                : h.day_key && navigate(`/notebook/${h.day_key}`)
+                            h.kind === 'lesson'
+                              ? navigate(`/notebook/lessons/${h.ref_id}`)
+                              : h.kind === 'resource'
+                                ? navigate('/library')
+                                : h.kind === 'error'
+                                  ? navigate(`/knowledge?tab=errors&focus=${h.ref_id}`)
+                                  : h.day_key && navigate(`/notebook/${h.day_key}`)
                           }
                         >
                           <span className="row">
                             <Badge tone="muted">{t(`notebook.kinds.${h.kind}`)}</Badge>
                             <strong style={{ fontSize: '0.9rem' }}>{h.title}</strong>
                             <span className="spacer" />
-                            {h.day_key && <span className="muted mono" style={{ fontSize: '0.75rem' }}>{h.day_key}</span>}
+                            {h.day_key && (
+                              <span className="muted mono" style={{ fontSize: '0.75rem' }}>
+                                {h.day_key}
+                              </span>
+                            )}
                           </span>
                           <Snippet text={h.snippet} />
                         </button>
@@ -233,7 +320,11 @@ export default function NotebookPage() {
           </Card>
         </div>
 
-        {selected ? <DayPage key={selected} dayKey={selected} /> : <EmptyState icon={<Search size={20} />}>{t('notebook.pickDay')}</EmptyState>}
+        {selected ? (
+          <DayPage key={selected} dayKey={selected} />
+        ) : (
+          <EmptyState icon={<Search size={20} />}>{t('notebook.pickDay')}</EmptyState>
+        )}
       </div>
     </>
   );
@@ -262,18 +353,37 @@ function DayPage({ dayKey }: { dayKey: string }) {
   const [editConcept, setEditConcept] = useState<Concept | null>(null);
   if (!day || !app) return null;
   const primary = app.languages.find((l) => l.is_primary) ?? app.languages[0];
-  const empty = !day.sessions.length && !day.concepts.length && !day.problems.length && !day.diary && !day.moods.length;
-  const feelingNames = (day.diary?.feeling_tag_ids ?? []).map((id) => feelings.find((f) => f.id === id)?.name).filter(Boolean);
+  const empty =
+    !day.sessions.length &&
+    !day.concepts.length &&
+    !day.problems.length &&
+    !day.diary &&
+    !day.moods.length;
+  const feelingNames = (day.diary?.feeling_tag_ids ?? [])
+    .map((id) => feelings.find((f) => f.id === id)?.name)
+    .filter(Boolean);
 
-  const title = formatDay(dayKey, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const title = formatDay(dayKey, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 
   if (editing) {
     return (
       <div className="stack" style={{ gap: 20 }}>
-        <Card headline={title} actions={<Button onClick={() => setEditing(false)}>{t('notebook.stopEdit')}</Button>}>
+        <Card
+          headline={title}
+          actions={<Button onClick={() => setEditing(false)}>{t('notebook.stopEdit')}</Button>}
+        >
           <div className="stack" style={{ gap: 16 }}>
             <ConceptInput
-              search={(p) => allConcepts.filter((c) => c.name.toLowerCase().includes(p.toLowerCase())).slice(0, 6)}
+              search={(p) =>
+                allConcepts
+                  .filter((c) => c.name.toLowerCase().includes(p.toLowerCase()))
+                  .slice(0, 6)
+              }
               categories={categories}
               onAdd={async (c: NewConcept) => {
                 if (!primary) return;
@@ -291,14 +401,26 @@ function DayPage({ dayKey }: { dayKey: string }) {
             <ConceptList concepts={day.concepts} onEdit={setEditConcept} />
             <ul className="stack" style={{ listStyle: 'none', padding: 0, margin: 0, gap: 8 }}>
               {day.problems.map((p) => (
-                <ProblemRow key={p.id} problem={p} feelings={feelings} onOpen={() => detail.open(p.id)} />
+                <ProblemRow
+                  key={p.id}
+                  problem={p}
+                  feelings={feelings}
+                  onOpen={() => detail.open(p.id)}
+                />
               ))}
             </ul>
           </div>
         </Card>
         <DiaryCard dayKey={dayKey} diary={day.diary} concepts={day.concepts} feelings={feelings} />
-        <UsefulnessCard calc={day.calc} selfValue={day.summary?.self_usefulness ?? null} comparison={day.comparison} onCommit={(v) => selfU.mutate({ day_key: dayKey, value: v })} />
-        {editConcept && <ConceptEditModal concept={editConcept} onClose={() => setEditConcept(null)} />}
+        <UsefulnessCard
+          calc={day.calc}
+          selfValue={day.summary?.self_usefulness ?? null}
+          comparison={day.comparison}
+          onCommit={(v) => selfU.mutate({ day_key: dayKey, value: v })}
+        />
+        {editConcept && (
+          <ConceptEditModal concept={editConcept} onClose={() => setEditConcept(null)} />
+        )}
         {detail.element}
       </div>
     );
@@ -320,10 +442,14 @@ function DayPage({ dayKey }: { dayKey: string }) {
           <section className={s.pageSection}>
             <h3>{t('notebook.sessions')}</h3>
             {day.sessions.length ? (
-              <ul className="mono" style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.9rem' }}>
+              <ul
+                className="mono"
+                style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.9rem' }}
+              >
                 {day.sessions.map((x) => (
                   <li key={x.id}>
-                    {formatTime(x.started_at)} – {x.ended_at ? formatTime(x.ended_at) : '…'} · {formatDuration(x.elapsed_seconds)}
+                    {formatTime(x.started_at)} – {x.ended_at ? formatTime(x.ended_at) : '…'} ·{' '}
+                    {formatDuration(x.elapsed_seconds)}
                   </li>
                 ))}
                 <li style={{ fontWeight: 600, marginTop: 4 }}>
@@ -343,7 +469,12 @@ function DayPage({ dayKey }: { dayKey: string }) {
             {day.problems.length ? (
               <ul className="stack" style={{ listStyle: 'none', padding: 0, margin: 0, gap: 8 }}>
                 {day.problems.map((p) => (
-                  <ProblemRow key={p.id} problem={p} feelings={feelings} onOpen={() => detail.open(p.id)} />
+                  <ProblemRow
+                    key={p.id}
+                    problem={p}
+                    feelings={feelings}
+                    onOpen={() => detail.open(p.id)}
+                  />
                 ))}
               </ul>
             ) : (
@@ -352,7 +483,11 @@ function DayPage({ dayKey }: { dayKey: string }) {
           </section>
           <section className={s.pageSection}>
             <h3>{t('notebook.diary')}</h3>
-            {day.diary?.body ? <p className={s.diaryRead}>{day.diary.body}</p> : <p className="muted">–</p>}
+            {day.diary?.body ? (
+              <p className={s.diaryRead}>{day.diary.body}</p>
+            ) : (
+              <p className="muted">–</p>
+            )}
             {feelingNames.length > 0 && (
               <div className="row-wrap">
                 {feelingNames.map((n) => (
@@ -371,7 +506,9 @@ function DayPage({ dayKey }: { dayKey: string }) {
           <section className={s.pageSection}>
             <h3>{t('notebook.usefulness')}</h3>
             <p>
-              {day.summary?.self_usefulness != null ? t('notebook.self', { value: day.summary.self_usefulness }) + ' · ' : ''}
+              {day.summary?.self_usefulness != null
+                ? t('notebook.self', { value: day.summary.self_usefulness }) + ' · '
+                : ''}
               {t('notebook.calc', { value: day.summary?.calc_usefulness ?? day.calc.score })}
             </p>
           </section>

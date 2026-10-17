@@ -14,6 +14,7 @@ const Dashboard = lazy(() => import('@/pages/dashboard/DashboardPage'));
 const Knowledge = lazy(() => import('@/pages/knowledge/KnowledgePage'));
 const Week = lazy(() => import('@/pages/week/WeekPage'));
 const Notebook = lazy(() => import('@/pages/notebook/NotebookPage'));
+const Lesson = lazy(() => import('@/pages/notebook/LessonPage'));
 const Practice = lazy(() => import('@/pages/practice/PracticePage'));
 const Insights = lazy(() => import('@/pages/insights/InsightsPage'));
 const Library = lazy(() => import('@/pages/library/LibraryPage'));
@@ -51,6 +52,7 @@ const routes = [
       { path: 'knowledge', element: s(<Knowledge />) },
       { path: 'week', element: s(<Week />) },
       { path: 'notebook', element: s(<Notebook />) },
+      { path: 'notebook/lessons/:id', element: s(<Lesson />) },
       { path: 'notebook/:day', element: s(<Notebook />) },
       { path: 'practice', element: s(<Practice />) },
       { path: 'insights', element: s(<Insights />) },

@@ -39,6 +39,9 @@ pub const TABLES: &[&str] = &[
     "error_notes",
     "glossary_terms",
     "weekly_reviews",
+    "lessons",
+    "lesson_concepts",
+    "lesson_assets",
 ];
 
 fn table_rows(conn: &Connection, table: &str) -> AppResult<Vec<Value>> {

@@ -4,4 +4,5 @@
 pub mod content;
 pub mod core;
 pub mod files;
+pub mod lessons;
 pub mod practice;

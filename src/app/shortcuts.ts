@@ -24,6 +24,8 @@ export function useGlobalShortcuts() {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
       if (!mod || e.altKey) return;
+      // The lesson board has its own shortcuts (Ctrl+K adds a link there).
+      if ((e.target as Element | null)?.closest?.('[data-no-app-shortcuts]')) return;
       if (e.key === 'Enter') {
         e.preventDefault();
         const session = useTimerStore.getState().session;

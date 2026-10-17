@@ -110,7 +110,26 @@ interface WeeklyRow {
   updated_at: string;
 }
 
+interface LessonRow {
+  id: string;
+  title: string;
+  course: string | null;
+  icon: string | null;
+  color: string | null;
+  language_id: string | null;
+  day_key: string;
+  page: string | null;
+  page_text: string | null;
+  board: string | null;
+  concept_ids: string[];
+  deleted: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 interface Db {
+  lessons: LessonRow[];
+  lessonAssets: (A.LessonAsset & { sha: string })[];
   errorNotes: ErrorRow[];
   glossary: GlossaryRow[];
   weekly: Record<string, WeeklyRow>;
@@ -198,6 +217,8 @@ const BUILTIN_GLOSSARY: [string, string, string][] = [
 
 function emptyDb(): Db {
   return {
+    lessons: [],
+    lessonAssets: [],
     errorNotes: [],
     glossary: BUILTIN_GLOSSARY.map(([id, term, definition]) => ({
       id,
@@ -1058,6 +1079,87 @@ function glossaryDto(g: GlossaryRow): A.GlossaryTerm {
   return rest;
 }
 
+// ───────────────────────── lessons ─────────────────────────
+function lessonSummary(l: LessonRow): A.LessonSummary {
+  const live = new Set(liveConcepts().map((c) => c.id));
+  const text = l.page_text?.split(/\s+/).join(' ').trim() ?? '';
+  return {
+    id: l.id,
+    title: l.title,
+    course: l.course,
+    icon: l.icon,
+    color: l.color,
+    language_id: l.language_id,
+    day_key: l.day_key,
+    excerpt: text ? (text.length > 160 ? `${text.slice(0, 160)}…` : text) : null,
+    has_page: l.page != null,
+    has_board: l.board != null,
+    image_count: db.lessonAssets.filter((a) => a.lesson_id === l.id).length,
+    concept_ids: l.concept_ids.filter((id) => live.has(id)),
+    created_at: l.created_at,
+    updated_at: l.updated_at,
+  };
+}
+
+function lessonDto(l: LessonRow): A.Lesson {
+  return {
+    ...lessonSummary(l),
+    page: l.page,
+    board: l.board,
+    assets: db.lessonAssets.filter((a) => a.lesson_id === l.id).map(({ sha: _s, ...a }) => (void _s, a)),
+  };
+}
+
+function liveLesson(id: unknown): LessonRow {
+  const l = db.lessons.find((x) => x.id === id && !x.deleted);
+  if (!l) throw err('NOT_FOUND', 'lesson not found');
+  return l;
+}
+
+function lessonJson(v: string | null | undefined, what: string, max: number): string | null {
+  const s = v?.trim();
+  if (!s) return null;
+  if (s.length > max) throw err('VALIDATION', `The ${what} is too big to save.`);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(s);
+  } catch {
+    throw err('VALIDATION', `The ${what} couldn't be read`);
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw err('VALIDATION', `The ${what} couldn't be read`);
+  return s;
+}
+
+function lessonColor(v: string | null | undefined): string | null {
+  const c = cleanOpt(v, 'Colour', 24);
+  if (c && !/^[a-z0-9-]+$/.test(c)) throw err('VALIDATION', 'Unknown colour');
+  return c;
+}
+
+function lessonConcepts(ids: string[] | undefined): string[] {
+  const live = new Set(liveConcepts().map((c) => c.id));
+  for (const id of ids ?? []) if (!live.has(id)) throw err('NOT_FOUND', 'concept not found');
+  return [...new Set(ids ?? [])];
+}
+
+function lessonDay(d: string | null | undefined): string {
+  if (!d) return today();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || Number.isNaN(Date.parse(`${d}T00:00:00Z`)) || new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) !== d)
+    throw err('VALIDATION', `invalid day '${d}', expected YYYY-MM-DD`);
+  return d;
+}
+
+const IMAGE_MIME: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  bmp: 'image/bmp',
+  avif: 'image/avif',
+  svg: 'image/svg+xml',
+};
+
 function cleanOpt(v: string | null | undefined, what: string, max: number): string | null {
   const s = v?.trim();
   if (!s) return null;
@@ -1878,6 +1980,107 @@ const handlers: Record<A.CommandName, Handler> = {
     return `Downloads/${name}`;
   },
 
+  lesson_list: (a) => {
+    const q = String(a.query ?? '').trim().toLowerCase();
+    return db.lessons
+      .filter((l) => !l.deleted)
+      .filter((l) => !q || [l.title, l.course ?? '', l.page_text ?? ''].some((x) => x.toLowerCase().includes(q)))
+      .sort((x, y) => y.day_key.localeCompare(x.day_key) || y.created_at.localeCompare(x.created_at))
+      .map(lessonSummary);
+  },
+  lesson_get: (a) => lessonDto(liveLesson(a.id)),
+  lesson_create: (a) => {
+    const input = arg<A.LessonInput>(a, 'input');
+    const title = input.title?.trim() ?? '';
+    if (!title) throw err('VALIDATION', "Title can't be empty");
+    if (title.length > 200) throw err('VALIDATION', 'Title must be at most 200 characters');
+    const t = nowIso();
+    const l: LessonRow = {
+      id: uid(),
+      title,
+      course: cleanOpt(input.course, 'Course', 120),
+      icon: cleanOpt(input.icon, 'Icon', 16),
+      color: lessonColor(input.color),
+      language_id: input.language_id ?? null,
+      day_key: lessonDay(input.day_key),
+      page: null,
+      page_text: null,
+      board: null,
+      concept_ids: lessonConcepts(input.concept_ids),
+      deleted: false,
+      created_at: t,
+      updated_at: t,
+    };
+    db.lessons.push(l);
+    return lessonDto(l);
+  },
+  lesson_update: (a) => {
+    const u = arg<A.LessonUpdate>(a, 'input');
+    const l = liveLesson(u.id);
+    if (u.title !== undefined) {
+      const title = u.title.trim();
+      if (!title) throw err('VALIDATION', "Title can't be empty");
+      if (title.length > 200) throw err('VALIDATION', 'Title must be at most 200 characters');
+      l.title = title;
+    }
+    if (u.course !== undefined) l.course = cleanOpt(u.course, 'Course', 120);
+    if (u.icon !== undefined) l.icon = cleanOpt(u.icon, 'Icon', 16);
+    if (u.color !== undefined) l.color = lessonColor(u.color);
+    if (u.language_id !== undefined) l.language_id = u.language_id;
+    if (u.day_key !== undefined) l.day_key = lessonDay(u.day_key);
+    if (u.page !== undefined) l.page = lessonJson(u.page, 'page', 2 * 1024 * 1024);
+    if (u.page_text !== undefined) l.page_text = cleanOpt(u.page_text, 'Page text', 200_000);
+    if (u.board !== undefined) l.board = lessonJson(u.board, 'board', 8 * 1024 * 1024);
+    if (u.concept_ids !== undefined) l.concept_ids = lessonConcepts(u.concept_ids);
+    l.updated_at = nowIso();
+    return lessonDto(l);
+  },
+  lesson_delete: (a) => {
+    const l = liveLesson(a.id);
+    l.deleted = true;
+    l.updated_at = nowIso();
+    return null;
+  },
+  lesson_asset_add: (a) => {
+    const l = liveLesson(a.lesson_id);
+    const data = a.data_base64 as string | null | undefined;
+    const path = a.path as string | null | undefined;
+    if (!data === !path) throw err('VALIDATION', 'Send either the image data or its path');
+    const ext = String((data ? a.ext : path?.split('.').pop()) ?? '').toLowerCase();
+    const mime = IMAGE_MIME[ext];
+    if (!mime) throw err('VALIDATION', 'Only pictures can be added here: PNG, JPG, GIF, WebP, BMP, AVIF or SVG.');
+    // In the browser the "file" is the data URL itself, which <img> can show.
+    const src = data ? (data.startsWith('data:') ? data : `data:${mime};base64,${data}`) : String(path);
+    const sha = `${src.length}:${src.slice(-64)}`;
+    const existing = db.lessonAssets.find((x) => x.lesson_id === l.id && x.sha === sha);
+    if (existing) {
+      const { sha: _s, ...rest } = existing;
+      void _s;
+      return rest;
+    }
+    const id = uid();
+    const row = {
+      id,
+      lesson_id: l.id,
+      file_path: `lessons/2026/10/${id.replace(/-/g, '').slice(0, 12)}.${ext === 'jpeg' ? 'jpg' : ext}`,
+      abs_path: src,
+      mime,
+      bytes: data ? Math.floor((data.split('base64,').pop()!.length * 3) / 4) : 0,
+      created_at: nowIso(),
+      sha,
+    };
+    db.lessonAssets.push(row);
+    const { sha: _s, ...rest } = row;
+    void _s;
+    return rest;
+  },
+
+  lesson_asset_data: (a) => {
+    const asset = db.lessonAssets.find((x) => x.id === a.id && db.lessons.some((l) => l.id === x.lesson_id && !l.deleted));
+    if (!asset?.abs_path) throw err('NOT_FOUND', 'image not found');
+    return asset.abs_path;
+  },
+
   resource_add_link: (a) => {
     const url = String(a.url).trim();
     if (!/^https?:\/\//.test(url)) throw err('VALIDATION', 'Links must start with http:// or https://');
@@ -2106,7 +2309,7 @@ const handlers: Record<A.CommandName, Handler> = {
   search: (a) => {
     const q = String(a.query).trim();
     const f = arg<A.SearchFilters>(a, 'filters') ?? {};
-    const kinds = new Set(f.kinds?.length ? f.kinds : ['diary', 'concept', 'problem', 'resource', 'error']);
+    const kinds = new Set(f.kinds?.length ? f.kinds : ['diary', 'concept', 'problem', 'resource', 'error', 'lesson']);
     const inRange = (d: string | null) => (!f.from || (d ?? '') >= f.from) && (!f.to || (d ?? '') <= f.to);
     const ql = q.toLowerCase();
     const hits: A.SearchHit[] = [];
@@ -2133,6 +2336,12 @@ const handlers: Record<A.CommandName, Handler> = {
         const text = [e.message, e.cause, e.fix].filter(Boolean).join('\n');
         if (!e.deleted && text.toLowerCase().includes(ql) && inRange(e.day_key))
           hits.push({ kind: 'error', ref_id: e.id, day_key: e.day_key, title: e.message.split('\n')[0], snippet: snippet(text, q) });
+      }
+    if (kinds.has('lesson'))
+      for (const l of db.lessons) {
+        const text = [l.title, l.course, l.page_text].filter(Boolean).join('\n');
+        if (!l.deleted && text.toLowerCase().includes(ql) && inRange(l.day_key))
+          hits.push({ kind: 'lesson', ref_id: l.id, day_key: l.day_key, title: l.title, snippet: snippet(text, q) });
       }
     return hits.sort((x, y) => (y.day_key ?? '').localeCompare(x.day_key ?? '')).slice(0, f.limit ?? 50);
   },

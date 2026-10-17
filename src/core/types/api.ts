@@ -671,6 +671,72 @@ export interface ResourceFilter {
   query?: string | null;
 }
 
+// ───────────────────────── Notebook lessons ─────────────────────────
+/** An image on a lesson's page or board, copied into library/lessons/. */
+export interface LessonAsset {
+  id: string;
+  lesson_id: string;
+  /** relative to library/ */
+  file_path: string;
+  /** absolute path, for convertFileSrc() previews */
+  abs_path: string | null;
+  mime: string;
+  bytes: number;
+  created_at: string;
+}
+export interface LessonSummary {
+  id: string;
+  title: string;
+  /** the course or module this lesson belongs to, if any */
+  course: string | null;
+  /** an emoji */
+  icon: string | null;
+  /** a cover palette name, e.g. "teal" */
+  color: string | null;
+  language_id: string | null;
+  day_key: string;
+  /** start of the page as plain text */
+  excerpt: string | null;
+  has_page: boolean;
+  has_board: boolean;
+  image_count: number;
+  /** "What I learned" concepts from this lesson */
+  concept_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
+export interface Lesson extends LessonSummary {
+  /** the page as the editor's JSON document (a string), or null when empty */
+  page: string | null;
+  /** the board scene as JSON (a string), or null when empty */
+  board: string | null;
+  assets: LessonAsset[];
+}
+export interface LessonInput {
+  title: string;
+  course?: string | null;
+  icon?: string | null;
+  color?: string | null;
+  language_id?: string | null;
+  /** defaults to today */
+  day_key?: string | null;
+  concept_ids?: string[];
+}
+/** PATCH: missing fields are kept, null clears. */
+export interface LessonUpdate {
+  id: string;
+  title?: string;
+  course?: string | null;
+  icon?: string | null;
+  color?: string | null;
+  language_id?: string | null;
+  day_key?: string;
+  page?: string | null;
+  page_text?: string | null;
+  board?: string | null;
+  concept_ids?: string[];
+}
+
 // ───────────────────────── Roadmaps ─────────────────────────
 export type NodeStatus = 'not_started' | 'learning' | 'done';
 export interface Roadmap {
@@ -718,7 +784,7 @@ export interface Letter {
 }
 
 // ───────────────────────── Search ─────────────────────────
-export type SearchKind = 'diary' | 'concept' | 'problem' | 'resource' | 'error';
+export type SearchKind = 'diary' | 'concept' | 'problem' | 'resource' | 'error' | 'lesson';
 export interface SearchFilters {
   kinds?: SearchKind[] | null;
   from?: string | null;
@@ -985,6 +1051,19 @@ export interface Commands {
   resource_open: [{ id: string }, null];
   resource_fetch_title: [{ url: string }, string | null];
   library_open_folder: [Record<string, never>, null];
+
+  lesson_list: [{ query?: string | null }, LessonSummary[]];
+  lesson_get: [{ id: string }, Lesson];
+  lesson_create: [{ input: LessonInput }, Lesson];
+  lesson_update: [{ input: LessonUpdate }, Lesson];
+  lesson_delete: [{ id: string }, null];
+  /** either `data_base64` (+ `ext`) or `path`; rejects anything that isn't a picture */
+  lesson_asset_add: [
+    { lesson_id: string; data_base64?: string | null; ext?: string | null; path?: string | null },
+    LessonAsset,
+  ];
+  /** an image as a data URL (for the board) */
+  lesson_asset_data: [{ id: string }, string];
 
   roadmap_create: [{ title: string }, Roadmap];
   roadmap_list: [Record<string, never>, Roadmap[]];

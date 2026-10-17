@@ -81,6 +81,7 @@ feelings.
 
 | | |
 |---|---|
+| 📓 **Notebook lessons** | A page for every lesson you watch, shelved by course. Write on a dotted **page** with headings, 8 fonts (handwriting and marker too), colours, highlighter, checklists, callout boxes, code blocks and 200+ symbols, or draw on a free **board** with shapes, arrows, pen, sticky notes and stickers. Add photos of paper notes or tablet drawings by picking, pasting or dropping them. Link the concepts you learned so they come back for recall. |
 | 🧠 **What I learned** | Each concept gets a **note** in your own words and an **example**: a full-size editor with your code on the left and the output your compiler printed on the right. |
 | 🎓 **Knowledge** | Every concept as your own cheat sheet, an **error journal** ("you've seen this error before, here's how you fixed it") and a **glossary** that underlines tricky words in your notes. |
 | 🧭 **Getting started** | A first-weeks checklist whose buttons take you straight to each step. After 3+ days away, a kind *welcome back* instead of a broken streak. |

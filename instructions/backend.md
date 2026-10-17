@@ -404,7 +404,23 @@ CREATE TABLE weekly_reviews (
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL
 );
+
+-- Notebook lessons (migration 0005)
+CREATE TABLE lessons (
+  id, title, course, icon, color, language_id, day_key,
+  page        TEXT,                      -- rich page as the editor's JSON document
+  page_text   TEXT,                      -- the page as plain text (search, previews)
+  board       TEXT,                      -- board scene JSON; pictures referenced by lesson_assets.id
+  deleted_at, created_at, updated_at
+);
+CREATE TABLE lesson_concepts (lesson_id, concept_id, PRIMARY KEY (lesson_id, concept_id));
+CREATE TABLE lesson_assets (              -- pictures copied into library/lessons/YYYY/MM/
+  id, lesson_id, file_path, mime, bytes, sha256, created_at
+);
 ```
+Pictures are recognised by their first bytes (PNG, JPEG, GIF, WebP, BMP, AVIF, SVG),
+at most 25 MB, de-duplicated per lesson by SHA-256. Pages are at most 2 MB and boards
+8 MB of JSON (pictures live in files, not in these).
 
 ### Full-text search
 
@@ -415,7 +431,7 @@ CREATE VIRTUAL TABLE search_index USING fts5(
 );
 ```
 Kept in sync by the service layer on every insert/update of diary entries,
-concept notes, problem titles, resource titles and error notes.
+concept notes, problem titles, resource titles, error notes and lessons.
 
 ### Migrations
 
@@ -465,6 +481,7 @@ Errors return `{ code, message }` with codes like `VALIDATION`, `NOT_FOUND`,
 | Error journal | `error_note_list(language_id?)`, `error_note_save(input)`, `error_note_hit(id)`, `error_note_delete(id)` |
 | Glossary | `glossary_list`, `glossary_save(input)`, `glossary_delete(id)` |
 | Weekly review | `week_review_get(week_start?)`, `week_review_save(input)`, `week_focus` |
+| Notebook lessons | `lesson_list(query?)`, `lesson_get(id)`, `lesson_create(input)`, `lesson_update(input)` (PATCH), `lesson_delete(id)`, `lesson_asset_add(lesson_id, data_base64+ext \| path)`, `lesson_asset_data(id)` (data URL for the board) |
 | Guide | `getting_started` (which first steps the learner has done, from real data) |
 | AI | `ai_provider_list`, `ai_provider_save`, `ai_provider_set_key`, `ai_provider_test` |
 | Reports | `report_data(range, language_id?)`, `report_save_pdf(bytes, suggested_name)`, `report_markdown(range)` |
@@ -922,6 +939,7 @@ included.
 | **v0.5** | Library storage, roadmaps + import, AI providers (Ollama, OpenAI-compatible, Gemini, Anthropic, OpenRouter), keychain |
 | **v1.0** | Letters, LLM-ready Markdown report, optional AI diary linking, diagnostics export, signed builds, auto-update |
 | **v1.1** | Error journal, glossary, weekly reviews, getting-started progress, rest-day streaks, hint prompt, mini-project style |
+| **v1.2** | Notebook lessons: rich pages, boards, lesson pictures, lesson ↔ concept links |
 | **v2.0** | Opt-in community sync of aggregate stats only (separate spec; requires a server, accounts, moderation and anti-cheat) |
 
 ---

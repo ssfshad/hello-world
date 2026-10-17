@@ -1,0 +1,460 @@
+/* Notebook: lesson shelf and the lesson page. Cover colours come from tokens.css. */
+
+[data-color='teal'] {
+  --cover: var(--cover-teal);
+  --cover-ink: var(--progress);
+}
+[data-color='sun'] {
+  --cover: var(--cover-sun);
+  --cover-ink: var(--tc-yellow);
+}
+[data-color='coral'] {
+  --cover: var(--cover-coral);
+  --cover-ink: var(--tc-orange);
+}
+[data-color='sky'] {
+  --cover: var(--cover-sky);
+  --cover-ink: var(--tc-blue);
+}
+[data-color='grape'] {
+  --cover: var(--cover-grape);
+  --cover-ink: var(--tc-purple);
+}
+[data-color='mint'] {
+  --cover: var(--cover-mint);
+  --cover-ink: var(--tc-green);
+}
+[data-color='rose'] {
+  --cover: var(--cover-rose);
+  --cover-ink: var(--tc-pink);
+}
+[data-color='sand'] {
+  --cover: var(--cover-sand);
+  --cover-ink: var(--feeling);
+}
+[data-color='slate'] {
+  --cover: var(--cover-slate);
+  --cover-ink: var(--tc-gray);
+}
+
+.tabs {
+  margin-bottom: var(--s-5);
+}
+
+/* ───────── Shelf ───────── */
+.shelfBar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+.shelfSearch {
+  width: min(420px, 100%);
+}
+.course {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.courseTitle {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+}
+.courseCount {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+.cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--s-4);
+}
+.card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  text-align: left;
+  padding: var(--s-4) var(--s-4) var(--s-4) calc(var(--s-4) + 14px);
+  border: 1px solid color-mix(in srgb, var(--cover-ink) 18%, var(--line));
+  border-radius: 6px 16px 16px 6px;
+  background: var(--cover);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  box-shadow:
+    0 1px 0 var(--line),
+    0 6px 16px rgba(20, 24, 24, 0.06);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.card:hover {
+  transform: translateY(-3px) rotate(-0.4deg);
+  box-shadow:
+    0 1px 0 var(--line),
+    0 14px 26px rgba(20, 24, 24, 0.12);
+}
+.card:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.cardSpine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  border-radius: 6px 0 0 6px;
+  background: color-mix(in srgb, var(--cover-ink) 55%, var(--cover));
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent 0 14px,
+    rgba(255, 255, 255, 0.35) 14px 17px
+  );
+}
+.cardTop {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  justify-content: space-between;
+}
+.cardIcon {
+  font-size: 2rem;
+  line-height: 1;
+}
+.cardNumber {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cover-ink);
+}
+.cardTitle {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: var(--s-1);
+}
+.cardDate {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.cardExcerpt {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cardExcerptEmpty {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-style: italic;
+}
+.cardBadges {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: auto;
+  padding-top: var(--s-2);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+/* First-time welcome */
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--s-3);
+  padding: var(--s-8) var(--s-5);
+  border: 1px dashed var(--input-border);
+  border-radius: var(--r-card);
+  background: var(--surface-warm);
+}
+.welcome h2 {
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+}
+.welcome p {
+  max-width: 560px;
+  color: var(--ink-soft);
+  margin: 0;
+}
+.welcomeArt {
+  display: flex;
+  gap: var(--s-2);
+  font-size: 2.4rem;
+}
+.welcomeArt span:nth-child(1) {
+  transform: rotate(-8deg);
+}
+.welcomeArt span:nth-child(3) {
+  transform: rotate(8deg);
+}
+.welcomeList {
+  list-style: none;
+  padding: 0;
+  margin: var(--s-2) 0 var(--s-3);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 260px));
+  gap: var(--s-2) var(--s-5);
+  text-align: left;
+  font-size: 0.92rem;
+}
+
+/* Pickers (new lesson + cover) */
+.pickerLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.iconGrid {
+  display: grid;
+  grid-template-columns: repeat(8, 38px);
+  gap: 4px;
+}
+.iconChoice {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 1.35rem;
+  cursor: pointer;
+}
+.iconChoice:hover {
+  background: var(--line-soft);
+}
+.iconChoice[aria-pressed='true'] {
+  border-color: var(--progress);
+  background: var(--progress-tint);
+}
+.iconChoice:focus-visible,
+.colorChoice:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.colorGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.colorChoice {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--cover-ink) 35%, transparent);
+  background: var(--cover);
+  cursor: pointer;
+}
+.colorChoice[aria-pressed='true'] {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--cover-ink);
+}
+
+/* ───────── Lesson page ───────── */
+.lesson {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.lessonLoading {
+  min-height: 50vh;
+}
+.lessonTop {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: calc(var(--s-3) * -1);
+}
+.saveState {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  padding-right: var(--s-2);
+}
+.saveError {
+  color: var(--danger);
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.cover {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-5) var(--s-6);
+  border-radius: var(--r-card);
+  background: var(--cover);
+  border: 1px solid color-mix(in srgb, var(--cover-ink) 18%, var(--line));
+}
+.cover .coverIconBtn {
+  width: 76px;
+  height: 76px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--cover-ink) 40%, transparent);
+}
+.coverIcon {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+.coverPicker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  width: 344px;
+}
+.coverText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.titleInput {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-serif);
+  font-size: 2.1rem;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 2px 6px;
+  margin-left: -6px;
+  border-radius: 8px;
+}
+.titleInput:hover {
+  background: color-mix(in srgb, var(--surface) 50%, transparent);
+}
+.titleInput:focus {
+  outline: none;
+  background: var(--surface);
+  box-shadow: var(--focus-ring);
+}
+.coverMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+}
+.metaField {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.metaField > span {
+  font-weight: 600;
+  color: var(--cover-ink);
+}
+.metaField input {
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font: inherit;
+  color: var(--ink);
+  min-width: 180px;
+}
+.metaField input:focus {
+  outline: none;
+  border-color: var(--input-border);
+  background: var(--surface);
+  box-shadow: var(--focus-ring);
+}
+.learned {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+.learnedLabel {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.learnedChips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.learnedChip {
+  display: inline-flex;
+  align-items: center;
+}
+.unlink {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+.unlink:hover,
+.unlink:focus-visible {
+  outline: none;
+  color: var(--danger);
+  background: var(--danger-tint);
+}
+.viewTabs {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+.dropOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--progress) 18%, transparent);
+  border: 4px dashed var(--progress);
+  pointer-events: none;
+}
+.dropOverlay span {
+  background: var(--surface);
+  padding: var(--s-4) var(--s-6);
+  border-radius: var(--r-card);
+  font-size: 1.2rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-modal);
+}

@@ -64,6 +64,32 @@
   --shadow-modal: 0 18px 48px rgba(20, 24, 24, 0.22);
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--progress) 45%, transparent);
   --base-size: 15px;
+
+  /* Lesson pages: text colours, highlighter and cover colours (light) */
+  --tc-red: #c92a2a;
+  --tc-orange: #d9480f;
+  --tc-yellow: #a66a00;
+  --tc-green: #2b8a3e;
+  --tc-teal: #0c7c80;
+  --tc-blue: #1864ab;
+  --tc-purple: #7048e8;
+  --tc-pink: #c2255c;
+  --tc-gray: #6a6862;
+  --hl-yellow: #fff3a3;
+  --hl-green: #c9f0d1;
+  --hl-blue: #cfe6ff;
+  --hl-pink: #ffd6e7;
+  --hl-orange: #ffe0c2;
+  --hl-purple: #e7dcff;
+  --cover-teal: #d6ebe9;
+  --cover-sun: #fff0bf;
+  --cover-coral: #ffdcd2;
+  --cover-sky: #d8eafc;
+  --cover-grape: #ebe0fb;
+  --cover-mint: #d8f3e2;
+  --cover-rose: #fde0ec;
+  --cover-sand: #f0e7d6;
+  --cover-slate: #e0e5e8;
 }
 
 [data-theme='dark'] {
@@ -84,6 +110,30 @@
   --danger-tint: #3a2220;
   --heat-0: #263031;
   --shadow-modal: 0 18px 48px rgba(0, 0, 0, 0.5);
+  --tc-red: #ff8787;
+  --tc-orange: #ffa94d;
+  --tc-yellow: #ffd43b;
+  --tc-green: #8ce99a;
+  --tc-teal: #63e6e2;
+  --tc-blue: #74c0fc;
+  --tc-purple: #b197fc;
+  --tc-pink: #f783ac;
+  --tc-gray: #adb5b2;
+  --hl-yellow: #5c4f12;
+  --hl-green: #1f4a2b;
+  --hl-blue: #1b3a5c;
+  --hl-pink: #5a2340;
+  --hl-orange: #5a3516;
+  --hl-purple: #3b2e66;
+  --cover-teal: #1f3b3e;
+  --cover-sun: #43391b;
+  --cover-coral: #4a2c25;
+  --cover-sky: #213549;
+  --cover-grape: #352c4a;
+  --cover-mint: #1f3b2c;
+  --cover-rose: #48283a;
+  --cover-sand: #3b3428;
+  --cover-slate: #2b3438;
 }
 
 [data-font-size='s'] {

@@ -20,6 +20,9 @@ import type {
   DayRange,
   DiarySaveInput,
   ErrorNoteInput,
+  Lesson,
+  LessonInput,
+  LessonUpdate,
   GlossaryInput,
   ImportInput,
   InsightRuleId,
@@ -70,6 +73,8 @@ export const qk = {
   reliability: ['reliability'] as const,
   search: (q: string, f: SearchFilters) => ['search', q, f] as const,
   errors: ['errors'] as const,
+  lessons: (q: string) => ['lessons', 'list', q] as const,
+  lesson: (id: string) => ['lessons', 'one', id] as const,
   glossary: ['glossary'] as const,
   // Under `stats` so anything that changes the log refreshes them.
   guide: ['stats', 'guide'] as const,
@@ -628,6 +633,64 @@ export function useSearch(query: string, filters: SearchFilters) {
     queryFn: () => call('search', { query, filters }),
     enabled: query.trim().length >= 2,
   });
+}
+
+// ───────────────────────── Notebook lessons ─────────────────────────
+export function useLessons(query = '') {
+  return useQuery({ queryKey: qk.lessons(query.trim()), queryFn: () => call('lesson_list', { query: query.trim() || null }) });
+}
+
+export function useLesson(id: string | null | undefined) {
+  return useQuery({
+    queryKey: qk.lesson(id ?? ''),
+    queryFn: () => call('lesson_get', { id: id! }),
+    enabled: !!id,
+    // The editors own the live copy while open; don't refetch under them.
+    staleTime: Infinity,
+  });
+}
+
+export function useLessonMutations() {
+  const qc = useQueryClient();
+  const invList = () => {
+    qc.invalidateQueries({ queryKey: ['lessons', 'list'] });
+    qc.invalidateQueries({ queryKey: ['search'] });
+  };
+  const store = (l: Lesson) => qc.setQueryData(qk.lesson(l.id), l);
+  return {
+    create: useMutation({
+      mutationFn: (input: LessonInput) => call('lesson_create', { input }),
+      onSuccess: (l) => {
+        store(l);
+        invList();
+      },
+    }),
+    update: useMutation({
+      mutationFn: (input: LessonUpdate) => call('lesson_update', { input }),
+      onSuccess: (l) => {
+        store(l);
+        invList();
+      },
+    }),
+    remove: useMutation({
+      mutationFn: (id: string) => call('lesson_delete', { id }),
+      onSuccess: (_r, id) => {
+        qc.removeQueries({ queryKey: qk.lesson(id) });
+        invList();
+      },
+    }),
+    addAsset: useMutation({
+      mutationFn: (a: CommandArgsOf<'lesson_asset_add'>) => call('lesson_asset_add', a),
+      onSuccess: (asset) => {
+        qc.setQueryData<Lesson>(qk.lesson(asset.lesson_id), (l) =>
+          l && !l.assets.some((x) => x.id === asset.id)
+            ? { ...l, assets: [...l.assets, asset], image_count: l.image_count + 1 }
+            : l,
+        );
+        invList();
+      },
+    }),
+  };
 }
 
 // ───────────────────────── Error journal / glossary ─────────────────────────

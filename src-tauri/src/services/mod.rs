@@ -11,6 +11,7 @@ pub mod diary;
 pub mod errors;
 pub mod glossary;
 pub mod insights;
+pub mod lessons;
 pub mod letters;
 pub mod library;
 pub mod mood;

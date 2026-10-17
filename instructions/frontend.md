@@ -242,7 +242,21 @@ Layout: three columns (360 px / flexible / 340 px).
 
 ### 5.4 Notebook
 
-**Purpose:** reread past days. The diary for the future developer.
+**Purpose:** the learner's own notes for every lesson, and rereading past days. Two tabs: **Lessons** (default) and **Days**.
+
+**Lessons tab**
+- A shelf of lessons as coloured notebook covers (icon, colour, title, date, start of the page, badges for page / board / pictures / concepts), grouped by course; inside a course, lessons are in learning order and numbered. Search matches title, course and page text.
+- "New lesson": title (required), course (autocompletes existing ones), icon, cover colour. Opens the lesson.
+- First run: a welcome card explaining page, board, photos and "What I learned".
+
+**Lesson** (`/notebook/lessons/:id`)
+- Cover: icon + colour picker, editable title, course, date. Autosaves (status: Saved / Saving… / Not saved + Try again). Delete asks first; linked concepts stay.
+- "What I learned": chips for linked concepts (open → concept editor, × → unlink). "Add" picks an existing concept or logs a new one (same input as Today).
+- **Page** view: rich text on dotted paper. Toolbar: undo/redo, text style (text, three heading sizes), font (Normal, Book, Clean, Code, Handwriting, Neat hand, Marker, Rounded), size, bold/italic/underline/strike, text colour (9), highlighter (6), bullets, numbers, checklist, alignment, callouts (Tip, Remember, Watch out, Question, I got it), code block, divider, symbols & emoji, picture. Pictures can also be pasted or dropped, and resized. Colours are CSS variables so pages read well in light and dark.
+- **Board** view: a free canvas (Excalidraw) with shapes, arrows, pen, text, fonts and colours, plus a shelf of stickers (the same symbol sets), sticky notes in six colours, and "Add a photo". Fonts are served by the app, not a CDN.
+- Pictures are scaled to at most 2400 px and copied into `library/lessons/`; pages and boards store the picture's id, not its path.
+
+**Days tab** (`/notebook?tab=days`, `/notebook/:day`): reread past days.
 
 - Left: month calendar. Each day cell shows a tiny mood color dot and a teal fill proportional to time.
 - Right: the selected day as a read-only "page": sessions, concepts with notes, problems with status and times, diary text, feelings, self vs calculated usefulness.
