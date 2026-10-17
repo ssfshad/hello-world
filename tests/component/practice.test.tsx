@@ -67,6 +67,30 @@ describe('practice setup', () => {
     again.unmount();
   });
 
+  it('puts extra instructions in their own prompt section', async () => {
+    useUiStore.setState({ practiceSettings: { ...DEFAULT_PRACTICE_SETTINGS, range: 'all' } });
+    window.location.hash = '#/practice';
+    const user = userEvent.setup();
+    const { unmount } = render(<App />);
+    const box = await screen.findByLabelText('Extra instructions for the AI (optional)', {}, T);
+    await screen.findByText(/\d+ of \d+ selected/, {}, T);
+    const preview = () => document.querySelector('pre[aria-busy]')?.textContent ?? '';
+    await waitFor(() => expect(preview()).toContain('OUTPUT'), T);
+    expect(preview()).not.toContain('EXTRA INSTRUCTIONS');
+
+    await user.type(box, 'use food examples');
+    expect(screen.getByText(/17\/500/)).toBeInTheDocument();
+    await waitFor(
+      () =>
+        expect(preview()).toContain(
+          "LEARNER'S EXTRA INSTRUCTIONS (follow unless they break the rules above):\nuse food examples",
+        ),
+      T,
+    );
+    expect(useUiStore.getState().practiceSettings.instructions).toBe('use food examples');
+    unmount();
+  });
+
   it('offers All time when the range has no concepts', async () => {
     useUiStore.setState({ practiceSettings: { ...DEFAULT_PRACTICE_SETTINGS, range: 'custom', customFrom: '2000-01-01', customTo: '2000-01-02' } });
     window.location.hash = '#/practice';

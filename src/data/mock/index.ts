@@ -19,6 +19,7 @@ import {
   buildHintPrompt,
   LLM_PREAMBLE,
   PROMPT_VERSION,
+  MAX_CUSTOM_INSTRUCTIONS,
   validateResponse,
   DIFFICULTY_DEFS,
   JSON_SHAPE_EXAMPLE,
@@ -781,6 +782,8 @@ function buildPrompt(cfg: A.PracticeConfig): A.BuiltPrompt {
     .map((id) => db.concepts.find((c) => c.id === id))
     .filter((c): c is ConceptRow => !!c);
   if (!concepts.length) throw err('VALIDATION', 'Pick at least one concept.');
+  if ((cfg.custom_instructions?.trim().length ?? 0) > MAX_CUSTOM_INSTRUCTIONS)
+    throw err('VALIDATION', 'Extra instructions can be at most 500 characters');
   const struggles = cfg.include_struggles ? struggleNames(lang.id) : [];
   return {
     prompt: buildGeneratePrompt({
@@ -791,6 +794,7 @@ function buildPrompt(cfg: A.PracticeConfig): A.BuiltPrompt {
       difficulty: cfg.difficulty,
       style: cfg.style,
       struggles,
+      custom_instructions: cfg.custom_instructions,
     }),
     prompt_version: PROMPT_VERSION,
     struggles,

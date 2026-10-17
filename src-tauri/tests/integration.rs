@@ -161,6 +161,7 @@ fn practice_roundtrip_and_report() {
         style: "cf".into(),
         include_struggles: true,
         provider_id: None,
+        custom_instructions: None,
     };
     let built = practice::build_prompt(&conn, &cfg, now).unwrap();
     assert!(built.prompt.contains("Codeforces-style"));

@@ -23,6 +23,8 @@ export interface PracticeSettings {
   style: ProblemStyle;
   mode: 'copy_prompt' | 'api';
   struggles: boolean;
+  /** extra instructions for the AI */
+  instructions: string;
 }
 export const DEFAULT_PRACTICE_SETTINGS: PracticeSettings = {
   range: '7',
@@ -33,6 +35,7 @@ export const DEFAULT_PRACTICE_SETTINGS: PracticeSettings = {
   style: 'beginner',
   mode: 'copy_prompt',
   struggles: false,
+  instructions: '',
 };
 
 interface UiState {

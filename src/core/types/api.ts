@@ -524,6 +524,8 @@ export interface PracticeConfig {
   include_struggles: boolean;
   /** API mode only; null = default provider */
   provider_id?: string | null;
+  /** the learner's extra wishes for the AI (max 500 chars), e.g. "use food examples" */
+  custom_instructions?: string | null;
 }
 
 export interface BuiltPrompt {

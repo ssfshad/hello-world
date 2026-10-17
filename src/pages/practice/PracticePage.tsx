@@ -12,6 +12,7 @@ import {
   DifficultyPicker,
   EmptyState,
   Select,
+  TextArea,
   TextField,
   Tooltip,
   toast,
@@ -56,7 +57,7 @@ export default function PracticePage() {
   // The setup is remembered between visits.
   const settings = useUiStore((st) => st.practiceSettings);
   const setSettings = useUiStore((st) => st.setPracticeSettings);
-  const { difficulty, count, style, mode, struggles } = settings;
+  const { difficulty, count, style, mode, struggles, instructions } = settings;
   /** Opened from "Practice" on a review item: list every concept so it can be preselected. */
   const [rangeOverride, setRangeOverride] = useState<RangeKind | null>(preselect ? 'all' : null);
   const rangeKind = rangeOverride ?? settings.range;
@@ -144,6 +145,7 @@ export default function PracticePage() {
         count,
         style,
         include_struggles: struggles,
+        custom_instructions: instructions.trim() || null,
         provider_id: mode === 'api' ? (defaultProvider?.id ?? null) : null,
       }
     : null;
@@ -331,6 +333,16 @@ export default function PracticePage() {
                 <small className="muted">{t('practice.strugglesHint')}</small>
               </span>
             </label>
+
+            <TextArea
+              label={t('practice.instructions')}
+              hint={t('practice.instructionsHint', { n: instructions.length, max: 500 })}
+              placeholder={t('practice.instructionsPlaceholder')}
+              value={instructions}
+              maxLength={500}
+              rows={3}
+              onChange={(e) => setSettings({ instructions: e.target.value })}
+            />
           </div>
         </Card>
 

@@ -87,6 +87,7 @@ export const practiceConfigSchema = z.object({
   style: z.enum(['beginner', 'story', 'cf', 'project']),
   include_struggles: z.boolean(),
   provider_id: z.string().nullable().optional(),
+  custom_instructions: z.string().trim().max(500).nullable().optional(),
 });
 
 /** Mirror of backend §8.4 used for client-side preview hints. */

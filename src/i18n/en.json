@@ -692,7 +692,10 @@
     "anyStatus": "Any status",
     "queueLevel": "Level",
     "anyLevel": "Any level",
-    "queueNoMatch": "No problems match these filters."
+    "queueNoMatch": "No problems match these filters.",
+    "instructions": "Extra instructions for the AI (optional)",
+    "instructionsPlaceholder": "e.g. use food examples · no input(), use variables · explain in Bangla",
+    "instructionsHint": "Added to the prompt in its own section. {{n}}/{{max}}"
   },
   "library": {
     "title": "Library",

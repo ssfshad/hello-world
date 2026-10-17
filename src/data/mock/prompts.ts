@@ -5,7 +5,9 @@
 import type { GeneratedProblem, ImportPreview } from '@/core/types/api';
 import { generatedSetSchema } from '@/core/schemas';
 
-export const PROMPT_VERSION = 1;
+/** 2: adds the learner's extra instructions section. */
+export const PROMPT_VERSION = 2;
+export const MAX_CUSTOM_INSTRUCTIONS = 500;
 
 export const DIFFICULTY_DEFS: Record<number, string> = {
   1: 'Uses exactly one concept directly. 3–10 lines of code.',
@@ -51,12 +53,19 @@ export interface PromptVars {
   difficulty: number;
   style: string;
   struggles: string[];
+  custom_instructions?: string | null;
 }
 
 export function buildGeneratePrompt(v: PromptVars): string {
   const list = v.concepts.map((c) => `- ${c.name}${c.note ? `: ${c.note}` : ''}`).join('\n');
   const struggles = v.struggles.length
     ? `Recent struggles (include at least one gentle problem on these ideas):\n${v.struggles.map((s) => `- ${s}`).join('\n')}\n`
+    : '';
+  const extra = v.custom_instructions?.trim()
+    ? `LEARNER'S EXTRA INSTRUCTIONS (follow unless they break the rules above):
+${v.custom_instructions.trim()}
+
+`
     : '';
   return `You are a patient programming coach for a beginner learning ${v.language}.
 They are on day ${v.journey_day} of learning.
@@ -81,7 +90,7 @@ RULES
 - reference_solution is complete, runnable ${v.language} code using only the
   listed concepts.
 
-OUTPUT
+${extra}OUTPUT
 Return ONLY valid JSON matching this shape, with no markdown and no extra text:
 ${JSON_SHAPE_EXAMPLE}
 `;

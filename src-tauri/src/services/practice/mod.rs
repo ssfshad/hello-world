@@ -17,12 +17,15 @@ use crate::time;
 
 pub use validate::{extract_and_validate, ImportPreview};
 
-pub const GENERATE_PROMPT: &str = include_str!("../../../prompts/generate_problems.v1.txt");
+pub const GENERATE_PROMPT: &str = include_str!("../../../prompts/generate_problems.v2.txt");
 pub const FIXUP_PROMPT: &str = include_str!("../../../prompts/fixup_json.v1.txt");
 pub const REPORT_PREAMBLE: &str = include_str!("../../../prompts/llm_report_preamble.v1.txt");
 pub const DIARY_LINK_PROMPT: &str = include_str!("../../../prompts/diary_link.v1.txt");
 pub const HINT_PROMPT: &str = include_str!("../../../prompts/problem_hint.v1.txt");
-pub const PROMPT_VERSION: i64 = 1;
+/// 2: adds the learner's extra instructions section.
+pub const PROMPT_VERSION: i64 = 2;
+/// Longest "extra instructions for the AI" text, in characters.
+pub const MAX_CUSTOM_INSTRUCTIONS: usize = 500;
 
 /// Difficulty definitions sent inside every prompt (backend §8.3).
 pub const DIFFICULTY: [(&str, &str); 5] = [
@@ -92,6 +95,9 @@ pub struct PracticeConfig {
     pub include_struggles: bool,
     #[serde(default)]
     pub provider_id: Option<String>,
+    /// The learner's own extra wishes, e.g. "use food examples"; older callers omit it.
+    #[serde(default)]
+    pub custom_instructions: Option<String>,
 }
 
 impl PracticeConfig {
@@ -106,6 +112,9 @@ impl PracticeConfig {
             return Err(AppError::validation("How many must be 1–10"));
         }
         style_definition(&self.style)?;
+        if self.custom_instructions.as_deref().is_some_and(|t| t.trim().chars().count() > MAX_CUSTOM_INSTRUCTIONS) {
+            return Err(AppError::validation("Extra instructions can be at most 500 characters"));
+        }
         Ok(())
     }
 }
@@ -169,6 +178,7 @@ pub fn build_prompt(conn: &Connection, cfg: &PracticeConfig, now: DateTime<Utc>)
         ("style_definition", style_definition(&cfg.style)?.to_string()),
         ("struggles", struggles.iter().map(|s| format!("- {s}")).collect::<Vec<_>>().join("\n")),
         ("json_shape_example", json_shape_example()),
+        ("custom_instructions", cfg.custom_instructions.as_deref().unwrap_or("").trim().to_string()),
     ];
     Ok(BuiltPrompt { prompt: template::render(GENERATE_PROMPT, &vars), prompt_version: PROMPT_VERSION, struggles })
 }
@@ -418,6 +428,7 @@ mod tests {
             style: "beginner".into(),
             include_struggles: true,
             provider_id: None,
+            custom_instructions: None,
         };
         (c, cfg, now)
     }
@@ -466,6 +477,26 @@ mod tests {
         assert!(!p.contains("print(sum("), "reference solution must never be sent");
         assert!(!p.contains("THEIR CODE SO FAR"), "no attempt yet");
         assert!(!p.contains("{{"));
+    }
+
+    #[test]
+    fn extra_instructions_get_their_own_section() {
+        let (c, cfg, now) = setup();
+        let none = build_prompt(&c, &cfg, now).unwrap();
+        assert!(!none.prompt.contains("EXTRA INSTRUCTIONS"), "no instructions → block removed");
+        assert_eq!(none.prompt_version, 2);
+
+        let with = PracticeConfig { custom_instructions: Some("  use food examples {{language}}  ".into()), ..cfg.clone() };
+        let p = build_prompt(&c, &with, now).unwrap();
+        let at = p.prompt.find("LEARNER'S EXTRA INSTRUCTIONS (follow unless they break the rules above):").unwrap();
+        assert!(at > p.prompt.find("RULES").unwrap() && at < p.prompt.find("OUTPUT").unwrap());
+        // Their text is inserted as written, never expanded as a template.
+        assert!(p.prompt.contains("
+use food examples {{language}}
+"));
+
+        let long = PracticeConfig { custom_instructions: Some("x".repeat(501)), ..cfg };
+        assert!(build_prompt(&c, &long, now).is_err());
     }
 
     #[test]
