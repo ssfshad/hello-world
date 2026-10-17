@@ -162,6 +162,7 @@ fn practice_roundtrip_and_report() {
         include_struggles: true,
         provider_id: None,
         custom_instructions: None,
+        types: vec!["write_code".into()],
     };
     let built = practice::build_prompt(&conn, &cfg, now).unwrap();
     assert!(built.prompt.contains("Codeforces-style"));

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { ProblemStyle } from '@/core/types/api';
+import type { ProblemStyle, ProblemType } from '@/core/types/api';
 
 export interface LessonFilters {
   /** '' = all courses, '__none' = lessons without a course */
@@ -25,6 +25,8 @@ export interface PracticeSettings {
   struggles: boolean;
   /** extra instructions for the AI */
   instructions: string;
+  /** problem types to mix (at least one) */
+  types: ProblemType[];
 }
 export const DEFAULT_PRACTICE_SETTINGS: PracticeSettings = {
   range: '7',
@@ -36,6 +38,7 @@ export const DEFAULT_PRACTICE_SETTINGS: PracticeSettings = {
   mode: 'copy_prompt',
   struggles: false,
   instructions: '',
+  types: ['write_code'],
 };
 
 interface UiState {

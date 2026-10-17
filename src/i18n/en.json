@@ -234,6 +234,16 @@
     "shadowingCapped": "Capped at 60: lots of time but no problems attempted yet."
   },
   "problem": {
+    "types": {
+      "write_code": "Write the code",
+      "predict_output": "Predict the output",
+      "find_bug": "Find the bug",
+      "fill_blank": "Fill in the blanks",
+      "multiple_choice": "Multiple choice"
+    },
+    "code": "Code",
+    "answer": "Answer",
+    "fixedCode": "Fixed code",
     "modalTitle": "Log a problem",
     "editTitle": "Edit problem",
     "title": "Title",
@@ -267,6 +277,8 @@
     "reference": "Reference solution",
     "imDone": "I'm done — show solution",
     "giveUp": "I give up — show solution",
+    "imDoneAnswer": "I'm done — show answer",
+    "giveUpAnswer": "I give up — show answer",
     "revealWarning": "Revealing before you solve it marks this as “Solved with help”. That still counts.",
     "reportBad": "Report bad problem",
     "reportedBad": "Reported — excluded from stats",
@@ -693,6 +705,11 @@
     "queueLevel": "Level",
     "anyLevel": "Any level",
     "queueNoMatch": "No problems match these filters.",
+    "types": "Problem types",
+    "typesHint": "Pick more than one to mix them in the set.",
+    "typesMixed": "The set will mix these types.",
+    "queueType": "Type",
+    "anyType": "Any type",
     "instructions": "Extra instructions for the AI (optional)",
     "instructionsPlaceholder": "e.g. use food examples · no input(), use variables · explain in Bangla",
     "instructionsHint": "Added to the prompt in its own section. {{n}}/{{max}}"

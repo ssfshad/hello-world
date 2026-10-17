@@ -23,6 +23,7 @@ import {
   validateResponse,
   DIFFICULTY_DEFS,
   JSON_SHAPE_EXAMPLE,
+  TYPE_EXAMPLES,
 } from './prompts';
 
 // ───────────────────────── storage types ─────────────────────────
@@ -795,6 +796,7 @@ function buildPrompt(cfg: A.PracticeConfig): A.BuiltPrompt {
       style: cfg.style,
       struggles,
       custom_instructions: cfg.custom_instructions,
+      types: cfg.types,
     }),
     prompt_version: PROMPT_VERSION,
     struggles,
@@ -807,9 +809,14 @@ function conceptNames(ids: string[]) {
 
 function fakeAiResponse(cfg: A.PracticeConfig): string {
   const names = conceptNames(cfg.concept_ids);
+  const types = cfg.types?.length ? cfg.types : ['write_code' as const];
   const problems = Array.from({ length: cfg.count }, (_, i) => {
     const c = names[i % names.length] ?? 'loops';
+    const type = types[i % types.length];
+    if (type !== 'write_code')
+      return { ...TYPE_EXAMPLES[type], title: `${TYPE_EXAMPLES[type].statement.slice(0, 40)} (${i + 1})`, difficulty: cfg.difficulty, concepts: [c] };
     return {
+      type,
       title: `${['Counting', 'Echo', 'Tally', 'Mirror', 'Sum up', 'Pairs', 'Steps', 'Stars', 'Bins', 'Relay'][i % 10]} with ${c}`,
       difficulty: cfg.difficulty,
       concepts: [c],
@@ -1242,7 +1249,8 @@ function hintPrompt(id: string): string {
     if (st.input_format) parts.push(`Input: ${st.input_format}`);
     if (st.output_format) parts.push(`Output: ${st.output_format}`);
     if (st.constraints) parts.push(`Constraints: ${st.constraints}`);
-    st.samples.forEach((s, i) =>
+    if (st.code) parts.push(`Code:\n${st.code}`);
+    (st.samples ?? []).forEach((s, i) =>
       parts.push(`Sample ${i + 1} input:\n${s.input.trimEnd()}\nSample ${i + 1} output:\n${s.output.trimEnd()}`),
     );
   }
@@ -1867,7 +1875,7 @@ const handlers: Record<A.CommandName, Handler> = {
     return {
       prompt,
       raw_text: raw,
-      preview: validateResponse(raw, conceptNames(cfg.concept_ids), cfg.difficulty),
+      preview: validateResponse(raw, conceptNames(cfg.concept_ids), cfg.difficulty, cfg.types),
       provider: provider.kind,
       model: provider.model,
     } satisfies A.GenerateResult;
@@ -1878,11 +1886,16 @@ const handlers: Record<A.CommandName, Handler> = {
   },
   practice_validate_response: (a) => {
     const cfg = arg<A.PracticeConfig>(a, 'config');
-    return validateResponse(String(a.raw_text), conceptNames(cfg.concept_ids), cfg.difficulty);
+    return validateResponse(String(a.raw_text), conceptNames(cfg.concept_ids), cfg.difficulty, cfg.types);
   },
   practice_import_response: (a) => {
     const input = arg<A.ImportInput>(a, 'input');
-    const preview = validateResponse(input.raw_text, conceptNames(input.config.concept_ids), input.config.difficulty);
+    const preview = validateResponse(
+      input.raw_text,
+      conceptNames(input.config.concept_ids),
+      input.config.difficulty,
+      input.config.types,
+    );
     if (!preview.ok) throw err(preview.error_code === 'INVALID_JSON' ? 'INVALID_JSON' : 'VALIDATION', preview.errors.join('; '));
     const set: SetRow = { id: uid(), mode: input.mode, provider: input.provider ?? null, model: input.model ?? null };
     db.sets.push(set);

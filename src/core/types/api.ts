@@ -204,17 +204,37 @@ export interface Sample {
 }
 
 /** Matches backend §8.4 JSON schema */
+/** Kinds of practice problem; problems saved before types existed are write_code. */
+export type ProblemType = 'write_code' | 'predict_output' | 'find_bug' | 'fill_blank' | 'multiple_choice';
+export const PROBLEM_TYPES: ProblemType[] = ['write_code', 'predict_output', 'find_bug', 'fill_blank', 'multiple_choice'];
+
 export interface GeneratedProblem {
+  /** missing on problems saved before types existed: write_code */
+  type?: ProblemType;
   title: string;
   difficulty: number;
   concepts: string[];
   statement: string;
-  input_format: string;
-  output_format: string;
+  /** write_code */
+  input_format?: string;
+  output_format?: string;
   constraints?: string | null;
-  samples: Sample[];
-  hint: string;
-  reference_solution: string;
+  samples?: Sample[];
+  hint?: string;
+  /** write_code: the answer program; find_bug: the fixed program */
+  reference_solution?: string;
+  /** predict_output / find_bug / fill_blank (and optionally multiple_choice): code to show */
+  code?: string | null;
+  /** predict_output: exactly what the code prints */
+  expected_output?: string | null;
+  /** fill_blank: what goes in each ___ gap, in order */
+  blanks?: string[] | null;
+  /** multiple_choice */
+  options?: string[] | null;
+  /** multiple_choice: 0-based index into options */
+  correct_option?: number | null;
+  /** shown after the learner answers */
+  explanation?: string | null;
 }
 
 export interface Problem {
@@ -526,6 +546,8 @@ export interface PracticeConfig {
   provider_id?: string | null;
   /** the learner's extra wishes for the AI (max 500 chars), e.g. "use food examples" */
   custom_instructions?: string | null;
+  /** problem types to mix; omitted = write_code */
+  types?: ProblemType[];
 }
 
 export interface BuiltPrompt {

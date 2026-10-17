@@ -34,7 +34,14 @@ import {
 import { call } from '@/data/client';
 import { copyText } from '@/data/platform';
 import { addDays } from '@/lib/day';
-import type { Concept, GenerateResult, PracticeConfig, ProblemStyle } from '@/core/types/api';
+import {
+  PROBLEM_TYPES,
+  type Concept,
+  type GenerateResult,
+  type PracticeConfig,
+  type ProblemStyle,
+  type ProblemType,
+} from '@/core/types/api';
 import { useUiStore, type PracticeSettings } from '@/stores/uiStore';
 import s from '../pages.module.css';
 import d from '@/components/domain/domain.module.css';
@@ -57,7 +64,7 @@ export default function PracticePage() {
   // The setup is remembered between visits.
   const settings = useUiStore((st) => st.practiceSettings);
   const setSettings = useUiStore((st) => st.setPracticeSettings);
-  const { difficulty, count, style, mode, struggles, instructions } = settings;
+  const { difficulty, count, style, mode, struggles, instructions, types } = settings;
   /** Opened from "Practice" on a review item: list every concept so it can be preselected. */
   const [rangeOverride, setRangeOverride] = useState<RangeKind | null>(preselect ? 'all' : null);
   const rangeKind = rangeOverride ?? settings.range;
@@ -75,6 +82,7 @@ export default function PracticePage() {
   const [generated, setGenerated] = useState<GenerateResult | null>(null);
   const [queueStatus, setQueueStatus] = useState<QueueStatus>('');
   const [queueLevel, setQueueLevel] = useState('');
+  const [queueType, setQueueType] = useState<ProblemType | ''>('');
 
   // "Mini project" links from elsewhere pick that style.
   const styleParam = params.get('style');
@@ -132,7 +140,10 @@ export default function PracticePage() {
   };
 
   const filteredQueue = queue.filter(
-    (p) => (!queueStatus || p.status === queueStatus) && (!queueLevel || String(p.difficulty) === queueLevel),
+    (p) =>
+      (!queueStatus || p.status === queueStatus) &&
+      (!queueLevel || String(p.difficulty) === queueLevel) &&
+      (!queueType || (p.statement?.type ?? 'write_code') === queueType),
   );
   const next = filteredQueue.find((p) => p.status !== 'in_progress') ?? filteredQueue[0];
 
@@ -146,6 +157,7 @@ export default function PracticePage() {
         style,
         include_struggles: struggles,
         custom_instructions: instructions.trim() || null,
+        types,
         provider_id: mode === 'api' ? (defaultProvider?.id ?? null) : null,
       }
     : null;
@@ -298,6 +310,25 @@ export default function PracticePage() {
               </div>
             </div>
 
+            <div className="stack" style={{ gap: 4 }}>
+              <ChipGroup label={t('practice.types')}>
+                {PROBLEM_TYPES.map((k) => {
+                  const on = types.includes(k);
+                  return (
+                    <Chip
+                      key={k}
+                      pressed={on}
+                      // At least one type stays picked.
+                      onToggle={() => (on ? types.length > 1 && setSettings({ types: types.filter((x) => x !== k) }) : setSettings({ types: [...types, k] }))}
+                    >
+                      {t(`problem.types.${k}`)}
+                    </Chip>
+                  );
+                })}
+              </ChipGroup>
+              <small className="muted">{types.length > 1 ? t('practice.typesMixed') : t('practice.typesHint')}</small>
+            </div>
+
             <div className="stack" style={{ gap: 6 }}>
               <span id="gen-with" style={{ fontSize: '0.87rem', fontWeight: 600, color: 'var(--ink-soft)' }}>
                 {t('practice.generateWith')}
@@ -444,6 +475,17 @@ export default function PracticePage() {
                     ]}
                   />
                 </div>
+                <div style={{ minWidth: 150 }}>
+                  <Select
+                    label={t('practice.queueType')}
+                    value={queueType}
+                    onChange={(e) => setQueueType(e.target.value as ProblemType | '')}
+                    options={[
+                      { value: '', label: t('practice.anyType') },
+                      ...PROBLEM_TYPES.map((k) => ({ value: k, label: t(`problem.types.${k}`) })),
+                    ]}
+                  />
+                </div>
               </div>
             )}
             {queue.length === 0 ? (
@@ -465,6 +507,7 @@ export default function PracticePage() {
                         {p.title}
                       </button>
                       <div className={d.rowMeta}>
+                        <Badge>{t(`problem.types.${p.statement?.type ?? 'write_code'}`)}</Badge>
                         {p.difficulty && <Badge>{t('common.level', { n: p.difficulty })}</Badge>}
                         {p.concept_names.map((c) => (
                           <Badge key={c} tone="muted">

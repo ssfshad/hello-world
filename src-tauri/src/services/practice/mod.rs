@@ -15,14 +15,14 @@ use super::util::{new_id, now_str};
 use crate::error::{AppError, AppResult};
 use crate::time;
 
-pub use validate::{extract_and_validate, ImportPreview};
+pub use validate::{extract_and_validate, ImportPreview, PROBLEM_TYPES};
 
 pub const GENERATE_PROMPT: &str = include_str!("../../../prompts/generate_problems.v2.txt");
 pub const FIXUP_PROMPT: &str = include_str!("../../../prompts/fixup_json.v1.txt");
 pub const REPORT_PREAMBLE: &str = include_str!("../../../prompts/llm_report_preamble.v1.txt");
 pub const DIARY_LINK_PROMPT: &str = include_str!("../../../prompts/diary_link.v1.txt");
 pub const HINT_PROMPT: &str = include_str!("../../../prompts/problem_hint.v1.txt");
-/// 2: adds the learner's extra instructions section.
+/// 2: adds the learner's extra instructions section and problem types.
 pub const PROMPT_VERSION: i64 = 2;
 /// Longest "extra instructions for the AI" text, in characters.
 pub const MAX_CUSTOM_INSTRUCTIONS: usize = 500;
@@ -62,7 +62,97 @@ pub fn style_definition(style: &str) -> AppResult<&'static str> {
     })
 }
 
-/// JSON shape shown to the model.
+/// What each problem type asks of the model (backend §8.6).
+pub fn type_rule(kind: &str) -> &'static str {
+    match kind {
+        "predict_output" => {
+            "predict_output: \"code\" is a short program that reads no input; the learner says exactly what it \
+             prints. Put the exact printed text in \"expected_output\"."
+        }
+        "find_bug" => {
+            "find_bug: \"code\" is a short program with exactly one bug and \"statement\" says what it should do. \
+             \"reference_solution\" is the fixed program and \"explanation\" names the bug."
+        }
+        "fill_blank" => {
+            "fill_blank: \"code\" is a short program with gaps written as ___ (three underscores); \"blanks\" \
+             lists what goes in each gap, in order (one entry per gap)."
+        }
+        "multiple_choice" => {
+            "multiple_choice: \"statement\" is the question (put any code in \"code\"); \"options\" has 3 or 4 \
+             answers and \"correct_option\" is the 0-based index of the right one."
+        }
+        _ => {
+            "write_code: the learner writes a program. Give exact \"input_format\" and \"output_format\", at least \
+             2 \"samples\", a \"hint\" and a complete, runnable \"reference_solution\"."
+        }
+    }
+}
+
+/// One example problem of a type, as the model should write it.
+fn type_example(kind: &str) -> Value {
+    let base = json!({
+        "type": kind,
+        "title": "Short title",
+        "difficulty": 1,
+        "concepts": ["concept name from the list"],
+    });
+    let extra = match kind {
+        "predict_output" => json!({
+            "statement": "What does this program print?",
+            "code": "for i in range(3):\n    print(i * 2)",
+            "expected_output": "0\n2\n4",
+            "hint": "Work out each round of the loop on paper.",
+            "explanation": "i is 0, 1, 2, so it prints 0, 2 and 4."
+        }),
+        "find_bug" => json!({
+            "statement": "This should print the numbers 1 to 5, but it doesn't. Find and fix the bug.",
+            "code": "for i in range(1, 5):\n    print(i)",
+            "reference_solution": "for i in range(1, 6):\n    print(i)",
+            "hint": "Check where the range stops.",
+            "explanation": "range stops before its end value, so it should be range(1, 6)."
+        }),
+        "fill_blank" => json!({
+            "statement": "Fill in the blanks so the program prints the sum of the list.",
+            "code": "total = ___\nfor x in [1, 2, 3]:\n    total ___ x\nprint(total)",
+            "blanks": ["0", "+="],
+            "hint": "Start the total at nothing, then add each number.",
+            "explanation": "total starts at 0 and += adds each x."
+        }),
+        "multiple_choice" => json!({
+            "statement": "What does len(\"hello\") return?",
+            "options": ["4", "5", "6", "an error"],
+            "correct_option": 1,
+            "hint": "Count the letters.",
+            "explanation": "\"hello\" has 5 characters."
+        }),
+        _ => json!({
+            "statement": "What to do, in plain language.",
+            "input_format": "Exactly what the input looks like.",
+            "output_format": "Exactly what to print.",
+            "constraints": "Optional limits, e.g. 1 <= n <= 100",
+            "samples": [
+                { "input": "3\n", "output": "6\n", "explanation": "optional" },
+                { "input": "1\n", "output": "1\n" }
+            ],
+            "hint": "A nudge that doesn't give the answer away.",
+            "reference_solution": "complete runnable code",
+            "explanation": "optional: why the answer works"
+        }),
+    };
+    let mut out = base;
+    if let (Some(o), Value::Object(e)) = (out.as_object_mut(), extra) {
+        o.extend(e);
+    }
+    out
+}
+
+/// JSON shape shown to the model: one example per requested type.
+pub fn json_shape_for(types: &[String]) -> String {
+    let problems: Vec<Value> = types.iter().map(|t| type_example(t)).collect();
+    serde_json::to_string_pretty(&json!({ "problems": problems })).unwrap_or_default()
+}
+
+/// JSON shape shown to the model (write-the-code problems; used by reports).
 pub fn json_shape_example() -> String {
     serde_json::to_string_pretty(&json!({
         "problems": [{
@@ -84,6 +174,10 @@ pub fn json_shape_example() -> String {
     .unwrap_or_default()
 }
 
+fn default_types() -> Vec<String> {
+    vec!["write_code".into()]
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PracticeConfig {
     pub language_id: String,
@@ -98,6 +192,9 @@ pub struct PracticeConfig {
     /// The learner's own extra wishes, e.g. "use food examples"; older callers omit it.
     #[serde(default)]
     pub custom_instructions: Option<String>,
+    /// Problem types to mix; older callers get write_code only.
+    #[serde(default = "default_types")]
+    pub types: Vec<String>,
 }
 
 impl PracticeConfig {
@@ -112,6 +209,12 @@ impl PracticeConfig {
             return Err(AppError::validation("How many must be 1–10"));
         }
         style_definition(&self.style)?;
+        if self.types.is_empty() {
+            return Err(AppError::validation("Pick at least one problem type"));
+        }
+        if let Some(t) = self.types.iter().find(|t| !PROBLEM_TYPES.contains(&t.as_str())) {
+            return Err(AppError::validation(format!("Unknown problem type: {t}")));
+        }
         if self.custom_instructions.as_deref().is_some_and(|t| t.trim().chars().count() > MAX_CUSTOM_INSTRUCTIONS) {
             return Err(AppError::validation("Extra instructions can be at most 500 characters"));
         }
@@ -177,7 +280,10 @@ pub fn build_prompt(conn: &Connection, cfg: &PracticeConfig, now: DateTime<Utc>)
         ("difficulty_definition", difficulty_definition(cfg.difficulty).to_string()),
         ("style_definition", style_definition(&cfg.style)?.to_string()),
         ("struggles", struggles.iter().map(|s| format!("- {s}")).collect::<Vec<_>>().join("\n")),
-        ("json_shape_example", json_shape_example()),
+        ("json_shape_example", json_shape_for(&cfg.types)),
+        ("types_list", cfg.types.join(", ")),
+        ("type_rules", cfg.types.iter().map(|t| format!("- {}", type_rule(t))).collect::<Vec<_>>().join("\n")),
+        ("mix", if cfg.types.len() > 1 { "Mix these types across the set.".into() } else { String::new() }),
         ("custom_instructions", cfg.custom_instructions.as_deref().unwrap_or("").trim().to_string()),
     ];
     Ok(BuiltPrompt { prompt: template::render(GENERATE_PROMPT, &vars), prompt_version: PROMPT_VERSION, struggles })
@@ -199,6 +305,7 @@ pub fn hint_prompt(conn: &Connection, problem_id: &str, now: DateTime<Utc>) -> A
             ("input_format", "Input: "),
             ("output_format", "Output: "),
             ("constraints", "Constraints: "),
+            ("code", "Code:\n"),
         ] {
             if let Some(v) = s.get(key).and_then(Value::as_str).map(str::trim).filter(|v| !v.is_empty()) {
                 statement.push(format!("{label}{v}"));
@@ -237,7 +344,7 @@ Sample {} output:
 }
 
 pub fn fixup_prompt(raw_text: &str, selected: &[String], difficulty: Option<i64>) -> String {
-    let preview = extract_and_validate(raw_text, selected, difficulty);
+    let preview = extract_and_validate(raw_text, selected, difficulty, &[]);
     let errors = if preview.errors.is_empty() { "unknown".to_string() } else { preview.errors.join("; ") };
     template::render(
         FIXUP_PROMPT,
@@ -256,7 +363,7 @@ pub fn selected_names(conn: &Connection, cfg: &PracticeConfig) -> AppResult<Vec<
 pub fn preview(conn: &Connection, raw_text: &str, cfg: &PracticeConfig) -> AppResult<ImportPreview> {
     cfg.validate()?;
     let names: Vec<String> = selected_names(conn, cfg)?.into_iter().map(|(_, n)| n).collect();
-    Ok(extract_and_validate(raw_text, &names, Some(cfg.difficulty)))
+    Ok(extract_and_validate(raw_text, &names, Some(cfg.difficulty), &cfg.types))
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -285,7 +392,7 @@ pub fn import(conn: &Connection, input: ImportInput, now: DateTime<Utc>) -> AppR
     }
     let selected = selected_names(conn, cfg)?;
     let names: Vec<String> = selected.iter().map(|(_, n)| n.clone()).collect();
-    let pv = extract_and_validate(&input.raw_text, &names, Some(cfg.difficulty));
+    let pv = extract_and_validate(&input.raw_text, &names, Some(cfg.difficulty), &cfg.types);
     if !pv.ok {
         return Err(AppError::InvalidJson(pv.errors.join("; ")));
     }
@@ -429,6 +536,7 @@ mod tests {
             include_struggles: true,
             provider_id: None,
             custom_instructions: None,
+            types: vec!["write_code".into()],
         };
         (c, cfg, now)
     }
@@ -497,6 +605,36 @@ use food examples {{language}}
 
         let long = PracticeConfig { custom_instructions: Some("x".repeat(501)), ..cfg };
         assert!(build_prompt(&c, &long, now).is_err());
+    }
+
+    #[test]
+    fn prompt_describes_the_chosen_problem_types() {
+        let (c, cfg, now) = setup();
+        let one = build_prompt(&c, &cfg, now).unwrap().prompt;
+        assert!(one.contains("Use these types: write_code."));
+        assert!(!one.contains("Mix these types") && !one.contains("predict_output"));
+
+        let mixed = PracticeConfig { types: vec!["predict_output".into(), "multiple_choice".into()], ..cfg.clone() };
+        let p = build_prompt(&c, &mixed, now).unwrap().prompt;
+        assert!(p.contains("Use these types: predict_output, multiple_choice. Mix these types across the set."));
+        assert!(p.contains("- predict_output: ") && p.contains("- multiple_choice: "));
+        assert!(p.contains("\"expected_output\"") && p.contains("\"correct_option\""), "examples for each type");
+        assert!(!p.contains("\"input_format\""), "no write_code example when it wasn't picked");
+        assert!(!p.contains("{{"));
+
+        for bad in [vec![], vec!["essay".to_string()]] {
+            assert!(build_prompt(&c, &PracticeConfig { types: bad, ..cfg.clone() }, now).is_err());
+        }
+    }
+
+    #[test]
+    fn configs_from_before_types_still_work() {
+        let cfg: PracticeConfig = serde_json::from_str(
+            r#"{"language_id":"l","concept_ids":["c"],"difficulty":1,"count":1,"style":"beginner"}"#,
+        )
+        .unwrap();
+        assert_eq!(cfg.types, vec!["write_code".to_string()]);
+        assert!(cfg.custom_instructions.is_none());
     }
 
     #[test]

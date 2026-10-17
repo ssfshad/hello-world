@@ -19,10 +19,11 @@ pub const SCHEMA_TEXT: &str = r#"{
       "maxItems": 10,
       "items": {
         "type": "object",
-        "required": ["title", "difficulty", "concepts", "statement",
-                     "input_format", "output_format", "samples",
-                     "hint", "reference_solution"],
+        "required": ["title", "difficulty", "concepts", "statement"],
         "properties": {
+          "type": {
+            "enum": ["write_code", "predict_output", "find_bug", "fill_blank", "multiple_choice"]
+          },
           "title":              { "type": "string", "maxLength": 120 },
           "difficulty":         { "type": "integer", "minimum": 1, "maximum": 5 },
           "concepts":           { "type": "array", "items": { "type": "string" } },
@@ -31,7 +32,7 @@ pub const SCHEMA_TEXT: &str = r#"{
           "output_format":      { "type": "string" },
           "constraints":        { "type": "string" },
           "samples": {
-            "type": "array", "minItems": 2,
+            "type": "array",
             "items": {
               "type": "object",
               "required": ["input", "output"],
@@ -43,7 +44,13 @@ pub const SCHEMA_TEXT: &str = r#"{
             }
           },
           "hint":               { "type": "string" },
-          "reference_solution": { "type": "string" }
+          "reference_solution": { "type": "string" },
+          "code":               { "type": "string" },
+          "expected_output":    { "type": "string" },
+          "blanks":             { "type": "array", "items": { "type": "string" } },
+          "options":            { "type": "array", "items": { "type": "string" }, "maxItems": 6 },
+          "correct_option":     { "type": "integer", "minimum": 0 },
+          "explanation":        { "type": "string" }
         }
       }
     }
@@ -63,19 +70,119 @@ pub struct Sample {
     pub explanation: Option<String>,
 }
 
+/// Kinds of practice problem. Problems saved before types existed are `write_code`.
+pub const PROBLEM_TYPES: [&str; 5] = ["write_code", "predict_output", "find_bug", "fill_blank", "multiple_choice"];
+
+/// The gap marker in `fill_blank` code.
+pub const BLANK: &str = "___";
+
+fn write_code() -> String {
+    "write_code".into()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeneratedProblem {
+    #[serde(rename = "type", default = "write_code")]
+    pub kind: String,
     pub title: String,
     pub difficulty: i64,
     pub concepts: Vec<String>,
     pub statement: String,
+    #[serde(default)]
     pub input_format: String,
+    #[serde(default)]
     pub output_format: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub constraints: Option<String>,
+    #[serde(default)]
     pub samples: Vec<Sample>,
+    #[serde(default)]
     pub hint: String,
+    /// write_code: the answer program; find_bug: the fixed program
+    #[serde(default)]
     pub reference_solution: String,
+    /// predict_output / find_bug / fill_blank (and optionally multiple_choice): code to show
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+    /// predict_output: exactly what the code prints
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_output: Option<String>,
+    /// fill_blank: the missing pieces, in order
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blanks: Option<Vec<String>>,
+    /// multiple_choice: the answers to pick from
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub options: Option<Vec<String>>,
+    /// multiple_choice: 0-based index into `options`
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub correct_option: Option<i64>,
+    /// shown after the learner answers
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub explanation: Option<String>,
+}
+
+fn filled(v: &Option<String>) -> bool {
+    v.as_deref().is_some_and(|t| !t.trim().is_empty())
+}
+
+/// What a problem of its type must contain; each missing piece is one error.
+fn type_errors(p: &GeneratedProblem, n: usize) -> Vec<String> {
+    let mut e = vec![];
+    let code = p.code.as_deref().unwrap_or("");
+    match p.kind.as_str() {
+        "write_code" => {
+            if p.samples.len() < 2 {
+                e.push(format!("Problem {n} needs at least 2 samples."));
+            }
+            if p.samples.iter().any(|s| s.input.trim().is_empty() && s.output.trim().is_empty()) {
+                e.push(format!("Problem {n}: a sample has no input and no output."));
+            }
+            if !p.samples.is_empty() && p.samples.iter().all(|s| s.output.trim().is_empty()) {
+                e.push(format!("Problem {n}: samples have no expected output."));
+            }
+            if p.hint.trim().is_empty() {
+                e.push(format!("Problem {n} has no hint."));
+            }
+            if p.reference_solution.trim().is_empty() {
+                e.push(format!("Problem {n} has no reference solution."));
+            }
+        }
+        "predict_output" => {
+            if code.trim().is_empty() {
+                e.push(format!("Problem {n} (predict the output) has no code."));
+            }
+            if !filled(&p.expected_output) {
+                e.push(format!("Problem {n} (predict the output) has no expected output."));
+            }
+        }
+        "find_bug" => {
+            if code.trim().is_empty() {
+                e.push(format!("Problem {n} (find the bug) has no code."));
+            }
+            if p.reference_solution.trim().is_empty() {
+                e.push(format!("Problem {n} (find the bug) has no fixed code in reference_solution."));
+            }
+        }
+        "fill_blank" => {
+            let gaps = code.matches(BLANK).count();
+            let blanks = p.blanks.as_ref().map_or(0, Vec::len);
+            if gaps == 0 {
+                e.push(format!("Problem {n} (fill in the blanks) has no ___ gaps in its code."));
+            } else if blanks != gaps {
+                e.push(format!("Problem {n} (fill in the blanks) has {gaps} gaps but {blanks} answers in \"blanks\"."));
+            }
+        }
+        "multiple_choice" => {
+            let opts = p.options.as_ref().map_or(0, Vec::len);
+            if !(2..=6).contains(&opts) {
+                e.push(format!("Problem {n} (multiple choice) needs 2 to 6 options."));
+            } else if !p.correct_option.is_some_and(|c| (0..opts as i64).contains(&c)) {
+                e.push(format!("Problem {n} (multiple choice): correct_option must point at one of the options."));
+            }
+        }
+        _ => {}
+    }
+    e
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -140,7 +247,12 @@ fn levenshtein(a: &str, b: &str) -> usize {
 
 /// Steps 1–4: extract, parse, validate against the schema (collecting all
 /// errors), then semantic checks that produce warnings.
-pub fn extract_and_validate(raw: &str, selected: &[String], difficulty: Option<i64>) -> ImportPreview {
+pub fn extract_and_validate(
+    raw: &str,
+    selected: &[String],
+    difficulty: Option<i64>,
+    types: &[String],
+) -> ImportPreview {
     let Some(text) = extract_json(raw) else {
         return ImportPreview::fail("INVALID_JSON", vec!["No JSON object found in the response.".into()]);
     };
@@ -175,11 +287,9 @@ pub fn extract_and_validate(raw: &str, selected: &[String], difficulty: Option<i
         if !titles.insert(p.title.trim().to_lowercase()) {
             errors.push(format!("Problem {n}: title \"{}\" is used twice in this set.", p.title));
         }
-        if p.samples.iter().any(|s| s.input.trim().is_empty() && s.output.trim().is_empty()) {
-            errors.push(format!("Problem {n}: a sample has no input and no output."));
-        }
-        if p.samples.iter().all(|s| s.output.trim().is_empty()) {
-            errors.push(format!("Problem {n}: samples have no expected output."));
+        errors.extend(type_errors(p, n));
+        if !types.is_empty() && !types.iter().any(|t| t == &p.kind) {
+            warnings.push(format!("Problem {n} is a \"{}\" problem, which you didn't ask for.", p.kind));
         }
         for c in &p.concepts {
             if !selected.is_empty() && !selected.iter().any(|s| fuzzy_match(c, s)) {
@@ -221,7 +331,7 @@ mod tests {
     #[test]
     fn valid_set_with_warnings() {
         let raw = format!(r#"{{"problems":[{}, {}]}}"#, problem("A", 2, r#""for loop""#), problem("B", 3, r#""regex""#));
-        let pv = extract_and_validate(&raw, &["for loops".into()], Some(2));
+        let pv = extract_and_validate(&raw, &["for loops".into()], Some(2), &[]);
         assert!(pv.ok, "{:?}", pv.errors);
         assert_eq!(pv.problems.len(), 2);
         assert_eq!(pv.warnings.len(), 2, "{:?}", pv.warnings);
@@ -230,7 +340,7 @@ mod tests {
     #[test]
     fn collects_all_schema_errors() {
         let raw = r#"{"problems":[{"title":"x","difficulty":9,"samples":[{"input":"1","output":"1"}]}]}"#;
-        let pv = extract_and_validate(raw, &[], None);
+        let pv = extract_and_validate(raw, &[], None, &[]);
         assert!(!pv.ok);
         assert_eq!(pv.error_code.as_deref(), Some("SCHEMA"));
         assert!(pv.errors.len() >= 3, "{:?}", pv.errors);
@@ -238,11 +348,56 @@ mod tests {
 
     #[test]
     fn invalid_json_and_semantic_errors() {
-        let pv = extract_and_validate("{\"problems\": [", &[], None);
+        let pv = extract_and_validate("{\"problems\": [", &[], None, &[]);
         assert_eq!(pv.error_code.as_deref(), Some("INVALID_JSON"));
         let raw = format!(r#"{{"problems":[{}, {}]}}"#, problem("Same", 1, ""), problem("same", 1, ""));
-        let pv = extract_and_validate(&raw, &[], None);
+        let pv = extract_and_validate(&raw, &[], None, &[]);
         assert!(!pv.ok && pv.errors[0].contains("twice"));
+    }
+
+    fn one(body: &str) -> ImportPreview {
+        let raw = format!(r#"{{"problems":[{{"title":"T","difficulty":1,"concepts":[],"statement":"s",{body}}}]}}"#);
+        extract_and_validate(&raw, &[], None, &[])
+    }
+
+    #[test]
+    fn each_problem_type_checks_its_own_fields() {
+        assert!(one(r#""type":"predict_output","code":"print(1)","expected_output":"1""#).ok);
+        assert!(!one(r#""type":"predict_output","code":"print(1)""#).ok, "needs expected_output");
+        assert!(one(r#""type":"find_bug","code":"x","reference_solution":"y""#).ok);
+        assert!(!one(r#""type":"find_bug","code":"x""#).ok, "needs the fixed code");
+        assert!(one(r#""type":"fill_blank","code":"a = ___\nb = ___","blanks":["1","2"]"#).ok);
+        let pv = one(r#""type":"fill_blank","code":"a = ___","blanks":["1","2"]"#);
+        assert!(!pv.ok && pv.errors[0].contains("1 gaps but 2"), "{:?}", pv.errors);
+        assert!(one(r#""type":"multiple_choice","options":["a","b","c"],"correct_option":2"#).ok);
+        assert!(!one(r#""type":"multiple_choice","options":["a","b","c"],"correct_option":3"#).ok);
+        assert!(!one(r#""type":"multiple_choice","options":["a"],"correct_option":0"#).ok);
+        assert!(!one(r#""type":"essay""#).ok, "unknown type");
+        // write_code still needs its samples, hint and solution.
+        let pv = one(r#""input_format":"i","output_format":"o""#);
+        assert!(!pv.ok && pv.errors.len() >= 3, "{:?}", pv.errors);
+    }
+
+    #[test]
+    fn problems_saved_before_types_load_as_write_code() {
+        let old = r#"{"title":"Old","difficulty":2,"concepts":["x"],"statement":"s","input_format":"i",
+            "output_format":"o","samples":[{"input":"1","output":"1"},{"input":"2","output":"2"}],
+            "hint":"h","reference_solution":"r"}"#;
+        let p: GeneratedProblem = serde_json::from_str(old).unwrap();
+        assert_eq!(p.kind, "write_code");
+        assert!(p.code.is_none() && p.options.is_none());
+        let back = serde_json::to_value(&p).unwrap();
+        assert_eq!(back["type"], "write_code");
+        assert!(back.get("options").is_none(), "unused fields are left out");
+    }
+
+    #[test]
+    fn warns_about_types_that_were_not_asked_for() {
+        let raw = r#"{"problems":[{"type":"predict_output","title":"T","difficulty":1,"concepts":[],
+            "statement":"s","code":"print(1)","expected_output":"1"}]}"#;
+        let pv = extract_and_validate(raw, &[], None, &["write_code".into()]);
+        assert!(pv.ok);
+        assert!(pv.warnings.iter().any(|w| w.contains("predict_output")), "{:?}", pv.warnings);
     }
 
     #[test]

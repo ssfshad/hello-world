@@ -11,6 +11,11 @@ TASK
 Create {{count}} practice problems at difficulty {{difficulty}}/5.
 Difficulty {{difficulty}} means: {{difficulty_definition}}
 Style: {{style_definition}}
+
+PROBLEM TYPES
+Use these types: {{types_list}}. {{mix}}
+{{type_rules}}
+Every problem has a "type" field with one of these names.
 {{#if struggles}}
 Recent struggles (include at least one gentle problem on these ideas):
 {{struggles}}
@@ -18,12 +23,13 @@ Recent struggles (include at least one gentle problem on these ideas):
 
 RULES
 - Each problem practices at least one listed concept.
-- Write clear, unambiguous statements. Define exact input and output formats.
-- Give at least 2 samples. Before answering, mentally run your reference
-  solution on every sample and make sure the outputs match exactly.
+- Write clear, unambiguous statements.
+- All code is {{language}} using only the listed concepts. Before answering,
+  mentally run every piece of code and make sure outputs, answers and samples
+  match it exactly.
 - The hint nudges without giving the answer away.
-- reference_solution is complete, runnable {{language}} code using only the
-  listed concepts.
+- "explanation" briefly says why the answer is right; it is shown after the
+  learner answers.
 
 {{#if custom_instructions}}
 LEARNER'S EXTRA INSTRUCTIONS (follow unless they break the rules above):

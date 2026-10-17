@@ -293,6 +293,14 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--s-3);
 }
+/* Multiple-choice options and fill-in-the-blank answers. */
+.options {
+  margin: 0;
+  padding-left: 1.6em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .section h3 {
   font-size: 0.93rem;
   margin-bottom: 6px;
