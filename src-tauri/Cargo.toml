@@ -1,6 +1,6 @@
 [package]
 name = "hello-world"
-version = "1.2.0"
+version = "1.2.1"
 description = "Hello World — a learning journal for new programmers"
 edition = "2021"
 
