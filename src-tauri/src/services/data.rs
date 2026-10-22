@@ -204,7 +204,8 @@ mod tests {
     fn every_table_is_exported() {
         let c = crate::db::open_in_memory().unwrap();
         let mut stmt = c
-            .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'search_index%' AND name NOT LIKE 'sqlite_%'")
+            // sync_* is per-device bookkeeping, deliberately not part of a user's export.
+            .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'search_index%' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'sync\\_%' ESCAPE '\\'")
             .unwrap();
         let names: Vec<String> = stmt.query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
         for n in names {

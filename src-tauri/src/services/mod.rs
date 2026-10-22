@@ -26,6 +26,7 @@ pub mod search;
 pub mod sessions;
 pub mod settings;
 pub mod stats;
+pub mod sync;
 pub mod util;
 pub mod weekly;
 
