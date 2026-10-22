@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { useLocation } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { KeyRound, Plug, Star, Trash2 } from 'lucide-react';
+import { KeyRound, Plug, RefreshCw, Star, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/app/PageHeader';
 import { Badge, Button, Card, IconButton, Modal, Select, Tabs, TextField, toast } from '@/components/ui';
 import {
@@ -16,6 +16,8 @@ import {
   useProviderMutations,
   useProviders,
   useSettingsUpdate,
+  useSyncActions,
+  useSyncStatus,
 } from '@/data/queries';
 import { checkForUpdate, pickDirectory, pickSavePath, type UpdateCheck } from '@/data/platform';
 import { profileSchema, providerSchema, type ProfileForm, type ProviderForm } from '@/core/schemas';
@@ -23,7 +25,7 @@ import { formatBytes, formatDay } from '@/lib/format';
 import type { AiProvider, AiProviderKind, AppSettings, FontSize, Theme } from '@/core/types/api';
 import s from '../pages.module.css';
 
-const SECTIONS = ['profile', 'languages', 'appearance', 'ai', 'data', 'reminders', 'about'] as const;
+const SECTIONS = ['profile', 'languages', 'appearance', 'ai', 'data', 'sync', 'reminders', 'about'] as const;
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -58,6 +60,7 @@ export default function SettingsPage() {
           <AppearanceSection settings={app.settings} />
           <AiSection settings={app.settings} />
           <DataSection />
+          <SyncSection />
           <RemindersSection settings={app.settings} />
           <AboutSection version={app.app_version} settings={app.settings} />
         </div>
@@ -595,6 +598,91 @@ function AboutSection({ version, settings }: { version: string; settings: AppSet
             <small className="muted">{t('settings.diagnosticsHint')}</small>
           </div>
         </details>
+      </div>
+    </Card>
+  );
+}
+
+function SyncSection() {
+  const { t } = useTranslation();
+  const { data: status } = useSyncStatus();
+  const m = useSyncActions();
+  const [repo, setRepo] = useState('');
+  const [token, setToken] = useState('');
+  if (!status) return null;
+
+  const onSync = () =>
+    m.syncNow.mutate(undefined, {
+      onSuccess: (r) => {
+        const n = r.applied + r.deleted;
+        toast.info(n > 0 ? t('settings.syncDone', { n }) : t('settings.syncDoneNone'));
+      },
+    });
+
+  return (
+    <Card title={t('settings.sync')} id="settings-sync">
+      <div className="stack" style={{ gap: 12 }}>
+        <p className="muted">{t('settings.syncIntro')}</p>
+        {!status.git_installed && <p role="alert">{t('settings.syncNoGit')}</p>}
+        {status.git_installed && !status.enabled && (
+          <form
+            className="stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              m.enable.mutate(
+                { repo_url: repo, token },
+                { onSuccess: () => setToken('') },
+              );
+            }}
+          >
+            <small className="muted">{t('settings.syncSteps')}</small>
+            <TextField
+              label={t('settings.syncRepo')}
+              placeholder={t('settings.syncRepoPlaceholder')}
+              value={repo}
+              onChange={(e) => setRepo(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <TextField
+              label={t('settings.syncToken')}
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              hint={t('settings.syncTokenKept')}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <small className="muted">{t('settings.syncPrivacy')}</small>
+            <div className="row-wrap">
+              <Button variant="primary" type="submit" loading={m.enable.isPending} disabled={!repo.trim() || !token.trim()}>
+                {t('settings.syncTurnOn')}
+              </Button>
+            </div>
+          </form>
+        )}
+        {status.enabled && (
+          <>
+            <div className="row-wrap" style={{ alignItems: 'center' }}>
+              <Badge>{t('settings.syncOn')}</Badge>
+              <span className="muted" style={{ overflowWrap: 'anywhere' }}>
+                {status.repo_url}
+              </span>
+            </div>
+            <div className="muted" style={{ fontSize: '0.85rem' }}>
+              {t('settings.syncLast')}: {status.last_sync ? new Date(status.last_sync).toLocaleString() : t('settings.syncNever')}
+            </div>
+            <div className="row-wrap">
+              <Button variant="primary" icon={<RefreshCw size={14} />} loading={m.syncNow.isPending} onClick={onSync}>
+                {t('settings.syncNow')}
+              </Button>
+              <Button loading={m.disable.isPending} onClick={() => m.disable.mutate()}>
+                {t('settings.syncTurnOff')}
+              </Button>
+            </div>
+            <small className="muted">{t('settings.syncTurnOffHint')}</small>
+          </>
+        )}
       </div>
     </Card>
   );

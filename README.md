@@ -104,13 +104,15 @@ feelings.
 | 📚 **Library & roadmaps** | Your links, notes and files; roadmaps you build yourself or import. |
 | ✉️ **Letters to future you** | Sealed until the day you choose. |
 | 📄 **Reports** | A PDF, plus a Markdown report ready to paste into any chatbot. |
+| 🔄 **Sync between PCs** | Optional. Settings → Sync keeps your journal the same on several PCs through a **private GitHub repo you own**. No Hello World server. Off by default. |
 
 ## 🔒 Privacy
 
 - Everything lives in `%APPDATA%\app.helloworld.journal\`: your database, library, backups and logs.
 - API keys are stored in the **Windows Credential Manager**, never in the database or the UI.
 - Your diary text is **never** sent to an AI unless you turn that on.
-- No telemetry. Nothing leaves the device unless you copy it, export it, or connect an AI model.
+- No telemetry. Nothing leaves the device unless you copy it, export it, connect an AI model, or turn on **Sync**.
+- **Sync** (off by default) writes your journal rows into a private GitHub repo you choose, so your text is stored there. The GitHub token is kept in the Windows Credential Manager. Synced: journal data. Not synced: API keys, settings, and (for now) lesson images and library files.
 
 ## 🚀 Getting started
 

@@ -519,6 +519,25 @@ export function useProviderMutations() {
   };
 }
 
+// ───────────────────────── Sync ─────────────────────────
+export function useSyncStatus() {
+  return useQuery({ queryKey: ['sync'], queryFn: () => call('sync_status') });
+}
+
+export function useSyncActions() {
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ queryKey: ['sync'] });
+  return {
+    enable: useMutation({
+      mutationFn: (a: { repo_url: string; token: string }) => call('sync_enable', a),
+      onSuccess: refresh,
+    }),
+    // Other devices may have changed anything, so every screen reloads.
+    syncNow: useMutation({ mutationFn: () => call('sync_now'), onSettled: () => qc.invalidateQueries() }),
+    disable: useMutation({ mutationFn: () => call('sync_disable'), onSuccess: refresh }),
+  };
+}
+
 // ───────────────────────── Reports ─────────────────────────
 export function useReportActions() {
   return {

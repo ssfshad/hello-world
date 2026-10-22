@@ -163,6 +163,11 @@ fn friendly_git_error(args: &[&str], stderr: &str) -> String {
     }
 }
 
+/// Proves the address and token work before sync is turned on.
+pub fn check_remote(remote: &Remote) -> AppResult<()> {
+    run_git(&std::env::temp_dir(), remote, &["ls-remote", "--heads", remote.url]).map(|_| ())
+}
+
 pub fn git_available() -> bool {
     let mut c = Command::new("git");
     c.arg("--version").stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());

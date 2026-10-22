@@ -374,6 +374,12 @@ pub async fn delete_all_data(state: State<'_, AppState>, confirm_phrase: String)
     for r in key_refs {
         let _ = secrets::delete(&r);
     }
+    // Sync is switched off along with the data: forget the token and the local repo copy.
+    let _ = secrets::delete(crate::commands::sync::TOKEN_REF);
+    let work = crate::services::sync_git::default_work_dir(&p.data_dir);
+    if work.exists() {
+        std::fs::remove_dir_all(&work)?;
+    }
     p.ensure()?;
     let fresh = db::open(&p.db, &p.backups)?;
     state.replace_conn(fresh)?;

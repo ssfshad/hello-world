@@ -6,3 +6,4 @@ pub mod core;
 pub mod files;
 pub mod lessons;
 pub mod practice;
+pub mod sync;

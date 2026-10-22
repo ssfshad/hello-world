@@ -957,6 +957,24 @@ export interface GettingStarted {
   has_practice: boolean;
 }
 
+// ───────────────────────── Sync ─────────────────────────
+export interface SyncStatus {
+  git_installed: boolean;
+  enabled: boolean;
+  repo_url: string | null;
+  has_token: boolean;
+  device_id: string | null;
+  last_sync: string | null;
+}
+
+export interface SyncOutcome {
+  applied: number;
+  deleted: number;
+  aliased: number;
+  other_devices: number;
+  pushed: boolean;
+}
+
 // ───────────────────────── Command map ─────────────────────────
 /** name → [args, result]. `args` is the object passed to invoke(). */
 export interface Commands {
@@ -1131,6 +1149,11 @@ export interface Commands {
   data_dir_move: [{ path: string }, DataInfo];
   data_info: [Record<string, never>, DataInfo];
   diagnostics_export: [{ path: string }, string];
+
+  sync_status: [Record<string, never>, SyncStatus];
+  sync_enable: [{ repo_url: string; token: string }, SyncStatus];
+  sync_now: [Record<string, never>, SyncOutcome];
+  sync_disable: [Record<string, never>, SyncStatus];
 }
 
 export type CommandName = keyof Commands;

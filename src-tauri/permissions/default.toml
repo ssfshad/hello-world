@@ -132,4 +132,8 @@ permissions = [
   "allow-data-info",
   "allow-data-dir-move",
   "allow-diagnostics-export",
+  "allow-sync-status",
+  "allow-sync-enable",
+  "allow-sync-now",
+  "allow-sync-disable",
 ]

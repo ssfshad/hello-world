@@ -269,6 +269,7 @@ function emptyDb(): Db {
 }
 
 let db: Db = emptyDb();
+const mockSync: A.SyncStatus = { git_installed: true, enabled: false, repo_url: null, has_token: false, device_id: null, last_sync: null };
 
 function boundary() {
   return db.profile?.day_boundary ?? '04:00';
@@ -2488,6 +2489,23 @@ const handlers: Record<A.CommandName, Handler> = {
   data_dir_move: (a) => ({ ...dataInfo(), data_dir: String(a.path) }),
   data_info: () => dataInfo(),
   diagnostics_export: (a) => String(a.path),
+
+  // Browser preview only: pretends to sync so the screen can be tried.
+  sync_status: () => ({ ...mockSync }),
+  sync_enable: (a) => {
+    if (!String(a.repo_url).startsWith('https://github.com/')) throw err('VALIDATION', "Use the repo's https://github.com/<owner>/<repo> address.");
+    Object.assign(mockSync, { enabled: true, repo_url: String(a.repo_url), has_token: true, device_id: 'mock-device' });
+    return { ...mockSync };
+  },
+  sync_now: async () => {
+    await new Promise((r) => setTimeout(r, 600));
+    mockSync.last_sync = new Date().toISOString();
+    return { applied: 0, deleted: 0, aliased: 0, other_devices: 1, pushed: true };
+  },
+  sync_disable: () => {
+    Object.assign(mockSync, { enabled: false, has_token: false });
+    return { ...mockSync };
+  },
 };
 
 function sumVals(r: Record<string, number>) {
@@ -2759,6 +2777,7 @@ function init() {
 /** Reset for tests. */
 export function resetMock(opts: { seeded: boolean }) {
   db = emptyDb();
+  Object.assign(mockSync, { enabled: false, repo_url: null, has_token: false, device_id: null, last_sync: null });
   initialized = true;
   if (opts.seeded) seed();
 }

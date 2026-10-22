@@ -133,6 +133,10 @@ fn main() {
             "data_info",
             "data_dir_move",
             "diagnostics_export",
+            "sync_status",
+            "sync_enable",
+            "sync_now",
+            "sync_disable",
         ]),
     ))
     .expect("failed to run tauri-build");

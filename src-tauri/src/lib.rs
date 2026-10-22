@@ -297,6 +297,10 @@ pub fn run() {
             commands::files::data_info,
             commands::files::data_dir_move,
             commands::files::diagnostics_export,
+            commands::sync::sync_status,
+            commands::sync::sync_enable,
+            commands::sync::sync_now,
+            commands::sync::sync_disable,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Hello World");
