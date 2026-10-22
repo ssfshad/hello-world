@@ -42,8 +42,17 @@ Because each file has one writer, `git pull --rebase` never conflicts.
 
 `ai_providers` and `settings` (per-device: API keys, theme), `insights`,
 `insight_rule_prefs`, `generated_sets` (derived/local), `search_index`
-(rebuilt). Library **files** (`resources`, `lesson_assets`) are a later phase:
-rows sync first, files go to `files/<sha256>` in the repo.
+(rebuilt).
+
+## Files (1.3.1)
+
+Rows of `lesson_assets` and `resources` carry `file_path` + `sha256`. Each round,
+after applying rows, `sync_files::exchange` copies files only this PC has to
+`files/<sha256>` in the repo and files only the repo has into the library. The
+name is the content hash, so two PCs adding the same picture never conflict.
+Bytes are verified against the row's hash both ways, paths from other PCs must
+stay inside the library folder, nothing is overwritten, and files over 25 MB are
+skipped and reported.
 
 ## Merging two existing journals (first sync)
 

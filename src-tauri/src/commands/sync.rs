@@ -101,7 +101,7 @@ pub async fn auto_loop(app: AppHandle) {
         let enabled = app.state::<AppState>().read(|c| sync::is_enabled(c)).unwrap_or(false);
         if enabled {
             match run_guarded(app.clone()).await {
-                Ok(o) if o.applied + o.deleted > 0 => {
+                Ok(o) if o.applied + o.deleted + o.files_down > 0 => {
                     let _ = app.emit("sync-applied", ());
                 }
                 Ok(_) => {}
@@ -119,7 +119,7 @@ pub fn run_sync(state: &AppState) -> AppResult<SyncOutcome> {
         .ok_or_else(|| AppError::validation("Sync is not set up."))?;
     let token = secrets::get(TOKEN_REF)?.ok_or_else(|| AppError::validation("The GitHub token is missing. Turn sync off and on again."))?;
     let p = state.paths();
-    let out = sync_git::sync_now(state, &sync_git::default_work_dir(&p.data_dir), &p.backups, &Remote { url: &url, token: Some(&token) })?;
+    let out = sync_git::sync_now(state, &sync_git::default_work_dir(&p.data_dir), &p.backups, &p.library, &Remote { url: &url, token: Some(&token) })?;
     tracing::info!(applied = out.applied, deleted = out.deleted, pushed = out.pushed, "sync finished");
     Ok(out)
 }

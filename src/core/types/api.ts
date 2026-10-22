@@ -973,6 +973,9 @@ export interface SyncOutcome {
   aliased: number;
   other_devices: number;
   pushed: boolean;
+  files_up: number;
+  files_down: number;
+  files_skipped: number;
 }
 
 // ───────────────────────── Command map ─────────────────────────

@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use crate::db;
 use crate::error::{AppError, AppResult};
 use crate::services::sync::{self, Entry};
+use crate::services::sync_files;
 
 const BRANCH: &str = "main";
 const FORMAT: u32 = 1;
@@ -46,6 +47,9 @@ pub struct SyncOutcome {
     pub aliased: usize,
     pub other_devices: usize,
     pub pushed: bool,
+    pub files_up: usize,
+    pub files_down: usize,
+    pub files_skipped: usize,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -326,7 +330,7 @@ pub fn commit_and_push(dir: &Path, remote: &Remote, me: &str) -> AppResult<bool>
 
 // ---- one full round ------------------------------------------------------
 
-pub fn sync_now(db: &impl Db, work_dir: &Path, backups_dir: &Path, remote: &Remote) -> AppResult<SyncOutcome> {
+pub fn sync_now(db: &impl Db, work_dir: &Path, backups_dir: &Path, library: &Path, remote: &Remote) -> AppResult<SyncOutcome> {
     if !git_available() {
         return Err(AppError::Io("Git is not installed. Install Git for Windows (git-scm.com), then try again.".into()));
     }
@@ -359,7 +363,11 @@ pub fn sync_now(db: &impl Db, work_dir: &Path, backups_dir: &Path, remote: &Remo
         Ok((report, sync::local_entries(c)?))
     })?;
 
-    // 3. network again
+    // 3. files: pictures other PCs added come in, ours go out (disk only, no lock)
+    let refs = db.with(|c| sync_files::list_refs(c))?;
+    let files = sync_files::exchange(&refs, library, work_dir)?;
+
+    // 4. network again
     write_device_file(work_dir, &me, newest, &mine)?;
     let pushed = commit_and_push(work_dir, remote, &me)?;
     db.with(|c| sync::set_state(c, "last_sync", &chrono::Utc::now().to_rfc3339()))?;
@@ -370,6 +378,9 @@ pub fn sync_now(db: &impl Db, work_dir: &Path, backups_dir: &Path, remote: &Remo
         aliased: report.aliased,
         other_devices,
         pushed,
+        files_up: files.uploaded,
+        files_down: files.downloaded,
+        files_skipped: files.skipped,
     })
 }
 
@@ -393,12 +404,13 @@ mod tests {
         db: TestDb,
         work: tempfile::TempDir,
         backups: tempfile::TempDir,
+        library: tempfile::TempDir,
     }
 
     fn pc() -> Pc {
         let c = db::open_in_memory().unwrap();
         sync::enable(&c).unwrap();
-        Pc { db: TestDb(Mutex::new(c)), work: tempfile::tempdir().unwrap(), backups: tempfile::tempdir().unwrap() }
+        Pc { db: TestDb(Mutex::new(c)), work: tempfile::tempdir().unwrap(), backups: tempfile::tempdir().unwrap(), library: tempfile::tempdir().unwrap() }
     }
 
     impl Pc {
@@ -406,7 +418,7 @@ mod tests {
             self.sync_with(&Remote { url, token: None })
         }
         fn sync_with(&self, remote: &Remote) -> AppResult<SyncOutcome> {
-            sync_now(&self.db, &self.work.path().join("repo"), self.backups.path(), remote)
+            sync_now(&self.db, &self.work.path().join("repo"), self.backups.path(), self.library.path(), remote)
         }
         fn sql(&self, sql: &str) {
             self.db.with(|c| Ok(c.execute_batch(sql)?)).unwrap();
@@ -499,6 +511,36 @@ mod tests {
         assert_eq!(a.count("SELECT COUNT(*) FROM concepts WHERE id='c1'"), 1);
         // A backup is taken before remote data is applied.
         assert!(std::fs::read_dir(a.backups.path()).unwrap().count() >= 1);
+    }
+
+    #[test]
+    fn a_lesson_image_arrives_with_its_file_even_if_the_row_came_first() {
+        let Some((_keep, url)) = bare_remote() else { return };
+        let (a, b) = (pc(), pc());
+        let bytes = b"\x89PNG pretend picture";
+        let sha = hex::encode(<sha2::Sha256 as sha2::Digest>::digest(bytes));
+        let rel = "lessons/2026/10/pic.png";
+        std::fs::create_dir_all(a.library.path().join("lessons/2026/10")).unwrap();
+        std::fs::write(a.library.path().join(rel), bytes).unwrap();
+        a.sql(&format!(
+            "INSERT INTO lessons(id,title,day_key,created_at,updated_at) VALUES ('ls1','Loops','2026-10-22','t','t');
+             INSERT INTO lesson_assets(id,lesson_id,file_path,mime,bytes,sha256,created_at)
+               VALUES ('as1','ls1','{rel}','image/png',{},'{sha}','t');",
+            bytes.len()
+        ));
+
+        assert_eq!(a.sync(&url).unwrap().files_up, 1);
+        let got = b.sync(&url).unwrap();
+        assert_eq!(got.files_down, 1);
+        assert_eq!(std::fs::read(b.library.path().join(rel)).unwrap(), bytes);
+        // Nothing more to move on the next round.
+        let again = b.sync(&url).unwrap();
+        assert_eq!((again.files_down, again.files_up, again.files_skipped), (0, 0, 0));
+
+        // The row can also arrive long before the file (an older build synced it): B just
+        // misses the file until A uploads. Simulate by removing it from B and syncing again.
+        std::fs::remove_file(b.library.path().join(rel)).unwrap();
+        assert_eq!(b.sync(&url).unwrap().files_down, 1);
     }
 
     #[test]

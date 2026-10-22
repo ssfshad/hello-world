@@ -616,6 +616,8 @@ function SyncSection() {
       onSuccess: (r) => {
         const n = r.applied + r.deleted;
         toast.info(n > 0 ? t('settings.syncDone', { n }) : t('settings.syncDoneNone'));
+        if (r.files_down > 0) toast.info(t('settings.syncFilesDown', { n: r.files_down }));
+        if (r.files_skipped > 0) toast.info(t('settings.syncFilesSkipped', { n: r.files_skipped }));
       },
     });
 

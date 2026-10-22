@@ -27,6 +27,7 @@ pub mod sessions;
 pub mod settings;
 pub mod stats;
 pub mod sync;
+pub mod sync_files;
 pub mod sync_git;
 pub mod util;
 pub mod weekly;

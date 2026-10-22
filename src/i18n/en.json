@@ -882,6 +882,8 @@
     "syncTurnOffHint": "Stops syncing and forgets the token. Your journal and the repo are left as they are.",
     "syncDone": "Synced. {{n}} changes received.",
     "syncDoneNone": "Synced. Nothing new from your other PCs.",
+    "syncFilesDown": "{{n}} pictures and files arrived from your other PCs.",
+    "syncFilesSkipped": "{{n}} files were not synced (over 25 MB, or damaged).",
     "syncTokenKept": "The token is kept in the Windows Credential Manager, never in your journal."
   },
   "quickLog": {

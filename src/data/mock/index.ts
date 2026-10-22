@@ -2500,7 +2500,7 @@ const handlers: Record<A.CommandName, Handler> = {
   sync_now: async () => {
     await new Promise((r) => setTimeout(r, 600));
     mockSync.last_sync = new Date().toISOString();
-    return { applied: 0, deleted: 0, aliased: 0, other_devices: 1, pushed: true };
+    return { applied: 0, deleted: 0, aliased: 0, other_devices: 1, pushed: true, files_up: 0, files_down: 0, files_skipped: 0 };
   },
   sync_disable: () => {
     Object.assign(mockSync, { enabled: false, has_token: false });

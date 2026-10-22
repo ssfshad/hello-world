@@ -51,6 +51,10 @@ There's no compiler inside. You run code wherever you already do, then paste
 the output back. Hello World tracks time, concepts, examples, problems and
 feelings.
 
+## 🆕 What's new in 1.3.1
+
+- **Sync now carries pictures and files:** lesson images and library files travel through your sync repo too (up to 25 MB each), so a notebook looks the same on every PC. Install 1.3.1 on **every** PC.
+
 ## 🆕 What's new in 1.3.0
 
 - **Sync between your PCs (optional, off by default):** Settings → Sync keeps your journal the same on several PCs through a **private GitHub repo that you own**. No Hello World server. See [Sync between your PCs](#-sync-between-your-pcs) for setup.
@@ -119,8 +123,9 @@ World server, and nothing is shared with anyone else.
 **What syncs:** everything you write and track: sessions, concepts, examples,
 problems, diary, mood, lessons and boards, errors, glossary, reviews, library
 and roadmap entries, letters, your profile and languages.
-**What doesn't (yet):** lesson images and library *files* (their entries sync,
-the files don't), AI provider settings and API keys, and appearance settings.
+Lesson images and library files sync too, up to 25 MB each (they are stored in
+the repo as `files/<hash>`; bigger ones are skipped and the app tells you).
+**What doesn't:** AI provider settings and API keys, and appearance settings.
 Those stay per PC on purpose.
 
 ### Set it up (first PC)
@@ -166,7 +171,7 @@ private and give the token access to that one repo only.
 - API keys are stored in the **Windows Credential Manager**, never in the database or the UI.
 - Your diary text is **never** sent to an AI unless you turn that on.
 - No telemetry. Nothing leaves the device unless you copy it, export it, connect an AI model, or turn on **Sync**.
-- **Sync** (off by default) writes your journal rows into a private GitHub repo you choose, so your text is stored there. The GitHub token is kept in the Windows Credential Manager. Synced: journal data. Not synced: API keys, settings, and (for now) lesson images and library files.
+- **Sync** (off by default) writes your journal rows into a private GitHub repo you choose, so your text is stored there. The GitHub token is kept in the Windows Credential Manager. Synced: journal data. Pictures and files up to 25 MB are stored there too. Not synced: API keys and settings.
 
 ## 🚀 Getting started
 
