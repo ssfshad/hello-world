@@ -221,7 +221,7 @@ fn drop_triggers(conn: &Connection) -> AppResult<()> {
 /// Turns sync on for this device: assigns a device id, installs the change
 /// triggers and registers every existing row. Safe to call again.
 pub fn enable(conn: &Connection) -> AppResult<String> {
-    let tx = conn.unchecked_transaction()?;
+    let tx = crate::services::util::Tx::begin(conn)?;
     if get_state(&tx, "device_id")?.is_none() {
         set_state(&tx, "device_id", &uuid::Uuid::now_v7().to_string())?;
     }
@@ -445,7 +445,7 @@ fn apply_one(
 /// the database untouched.
 pub fn apply_remote(conn: &Connection, remote: &[Entry]) -> AppResult<ApplyReport> {
     let me = device_id(conn)?;
-    let tx = conn.unchecked_transaction()?;
+    let tx = crate::services::util::Tx::begin(conn)?;
     tx.execute_batch("PRAGMA defer_foreign_keys = ON")?;
     set_state(&tx, "applying", "1")?;
 
@@ -543,6 +543,19 @@ mod tests {
 
     fn sync(from: &Connection, to: &Connection) -> ApplyReport {
         apply_remote(to, &local_entries(from).unwrap()).unwrap()
+    }
+
+    /// The app runs commands inside `AppState::write`, i.e. already in a transaction.
+    #[test]
+    fn works_inside_an_open_transaction() {
+        let a = device();
+        lang(&a, "l1", "Python");
+        let b = db::open_in_memory().unwrap();
+        let tx = b.unchecked_transaction().unwrap();
+        enable(&tx).unwrap();
+        apply_remote(&tx, &local_entries(&a).unwrap()).unwrap();
+        tx.commit().unwrap();
+        assert_eq!(count(&b, "SELECT COUNT(*) FROM languages WHERE name='Python'"), 1);
     }
 
     #[test]
