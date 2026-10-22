@@ -403,7 +403,10 @@ mod tests {
 
     impl Pc {
         fn sync(&self, url: &str) -> AppResult<SyncOutcome> {
-            sync_now(&self.db, &self.work.path().join("repo"), self.backups.path(), &Remote { url, token: None })
+            self.sync_with(&Remote { url, token: None })
+        }
+        fn sync_with(&self, remote: &Remote) -> AppResult<SyncOutcome> {
+            sync_now(&self.db, &self.work.path().join("repo"), self.backups.path(), remote)
         }
         fn sql(&self, sql: &str) {
             self.db.with(|c| Ok(c.execute_batch(sql)?)).unwrap();
@@ -425,6 +428,42 @@ mod tests {
         run_git(dir.path(), &none, &["init", "-q", "--bare", "-b", BRANCH, path.to_str().unwrap()]).unwrap();
         let url = path.to_str().unwrap().to_string();
         Some((dir, url))
+    }
+
+    /// Run by hand against a throwaway private repo:
+    ///   HW_TEST_REPO_URL=https://github.com/<you>/<repo> HW_TEST_TOKEN=<token> \n    ///   cargo test --lib real_github -- --ignored
+    #[test]
+    #[ignore = "talks to real GitHub"]
+    fn real_github_roundtrip() {
+        let url = std::env::var("HW_TEST_REPO_URL").expect("set HW_TEST_REPO_URL");
+        let token = std::env::var("HW_TEST_TOKEN").expect("set HW_TEST_TOKEN");
+        validate_repo_url(&url).unwrap();
+        let good = Remote { url: &url, token: Some(&token) };
+        check_remote(&good).unwrap();
+
+        // A wrong token is reported plainly, and never echoed back.
+        let bad = Remote { url: &url, token: Some("ghp_notARealToken000000000000000000000000") };
+        let msg = check_remote(&bad).unwrap_err().to_string();
+        assert!(msg.contains("token") || msg.contains("find that repo"), "got: {msg}");
+        assert!(!msg.contains("ghp_notARealToken"));
+
+        let (a, b) = (pc(), pc());
+        a.sql("INSERT INTO languages(id,name,created_at,updated_at) VALUES ('la','Python','t','t')");
+        a.sql("INSERT INTO concepts(id,language_id,name,learned_day_key,created_at,updated_at) VALUES ('c1','la','loops','2026-10-23','t','t')");
+        assert!(a.sync_with(&good).unwrap().pushed);
+
+        // The second PC made its own "Python" and its own concept.
+        b.sql("INSERT INTO languages(id,name,created_at,updated_at) VALUES ('lb','python','t','t')");
+        b.sql("INSERT INTO concepts(id,language_id,name,learned_day_key,created_at,updated_at) VALUES ('c2','lb','lists','2026-10-23','t','t')");
+        let got = b.sync_with(&good).unwrap();
+        assert_eq!(got.other_devices, 1);
+        assert!(a.sync_with(&good).unwrap().applied >= 1);
+
+        for p in [&a, &b] {
+            assert_eq!(p.count("SELECT COUNT(*) FROM languages WHERE name = 'Python' COLLATE NOCASE"), 1);
+            assert_eq!(p.count("SELECT COUNT(*) FROM concepts"), 2);
+        }
+        assert!(!a.sync_with(&good).unwrap().pushed);
     }
 
     #[test]

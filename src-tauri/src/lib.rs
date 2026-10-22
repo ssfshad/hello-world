@@ -164,6 +164,7 @@ pub fn run() {
             on_startup(&state);
             app.manage(state);
             tauri::async_runtime::spawn(background_loop(app.handle().clone()));
+            tauri::async_runtime::spawn(commands::sync::auto_loop(app.handle().clone()));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

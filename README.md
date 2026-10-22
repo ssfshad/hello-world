@@ -51,6 +51,10 @@ There's no compiler inside. You run code wherever you already do, then paste
 the output back. Hello World tracks time, concepts, examples, problems and
 feelings.
 
+## 🆕 What's new in 1.3.0
+
+- **Sync between your PCs (optional, off by default):** Settings → Sync keeps your journal the same on several PCs through a **private GitHub repo that you own**. No Hello World server. See [Sync between your PCs](#-sync-between-your-pcs) for setup.
+
 ## 🆕 What's new in 1.2.1
 
 - **What I learned → Notebook:** put a new concept in a new or existing lesson as you add it.
@@ -105,6 +109,56 @@ feelings.
 | ✉️ **Letters to future you** | Sealed until the day you choose. |
 | 📄 **Reports** | A PDF, plus a Markdown report ready to paste into any chatbot. |
 | 🔄 **Sync between PCs** | Optional. Settings → Sync keeps your journal the same on several PCs through a **private GitHub repo you own**. No Hello World server. Off by default. |
+
+## 🔄 Sync between your PCs
+
+Optional, and off until you turn it on. It keeps one journal on two or more
+Windows PCs through a **private GitHub repo that you own**. There is no Hello
+World server, and nothing is shared with anyone else.
+
+**What syncs:** everything you write and track: sessions, concepts, examples,
+problems, diary, mood, lessons and boards, errors, glossary, reviews, library
+and roadmap entries, letters, your profile and languages.
+**What doesn't (yet):** lesson images and library *files* (their entries sync,
+the files don't), AI provider settings and API keys, and appearance settings.
+Those stay per PC on purpose.
+
+### Set it up (first PC)
+
+1. Install [Git for Windows](https://git-scm.com/download/win) (the app uses it to talk to GitHub).
+2. On GitHub, create a new **private**, empty repo, for example `hello-world-sync`.
+3. Create an access token for **only that repo**: GitHub → *Settings* → *Developer settings* → *Personal access tokens* → *Fine-grained tokens* → *Generate new token*. Under *Repository access* choose *Only select repositories* and pick the sync repo. Under *Permissions → Repository permissions* set **Contents: Read and write**. Copy the token.
+4. In Hello World open **Settings → Sync**, paste the repo address (`https://github.com/<you>/hello-world-sync`) and the token, and press **Turn on sync**, then **Sync now**.
+
+The token is stored in the Windows Credential Manager. It is never written to your
+journal or to the repo.
+
+### Add another PC
+
+1. Install Hello World and Git on it.
+2. Finish the short welcome screen (skip the optional letter). Your real profile arrives with the first sync, and the **older** profile wins, so your journey start date is kept.
+3. Open **Settings → Sync**, enter the same repo address and a token (the same one works), turn sync on and press **Sync now**.
+
+### Day to day
+
+- It syncs by itself about 20 seconds after the app starts, then every 10 minutes. **Sync now** does it immediately. Press it before you switch PCs.
+- If the same item is edited on two PCs, the **newest edit wins** (compared by each PC's clock, so keep your clocks on automatic time). Different items never clash. Deletes sync too.
+- Before applying anything from another PC the app saves a backup (Settings → Data → Backups).
+- Offline is fine. It just catches up next time.
+- Update Hello World on every PC; a PC on an older version refuses to merge with a newer one and tells you so.
+- **Turn off** stops syncing and forgets the token. Your journal and the repo are left as they are.
+
+### If something goes wrong
+
+| Message | Meaning |
+|---|---|
+| *GitHub rejected the token* | Wrong, expired, or not allowed on that repo. Make a new token with Contents: Read and write. |
+| *GitHub can't find that repo* | Typo in the address, or the token can't see the repo. |
+| *Git is not installed* | Install Git for Windows, then reopen Settings → Sync. |
+| *has a newer version of Hello World* | Update this PC first. |
+
+**Privacy:** turning sync on stores your journal text in the repo you chose. Keep it
+private and give the token access to that one repo only.
 
 ## 🔒 Privacy
 

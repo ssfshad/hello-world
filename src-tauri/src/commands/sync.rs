@@ -4,7 +4,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::Serialize;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::error::{AppError, AppResult};
 use crate::secrets;
@@ -73,8 +73,8 @@ pub async fn sync_enable(app: AppHandle, repo_url: String, token: String) -> App
     .map_err(|e| AppError::Internal(e.to_string()))?
 }
 
-#[tauri::command(rename_all = "snake_case")]
-pub async fn sync_now(app: AppHandle) -> AppResult<SyncOutcome> {
+/// Runs one sync round off the UI thread. Only one runs at a time.
+pub async fn run_guarded(app: AppHandle) -> AppResult<SyncOutcome> {
     if RUNNING.swap(true, Ordering::SeqCst) {
         return Err(AppError::Conflict("A sync is already running.".into()));
     }
@@ -86,6 +86,30 @@ pub async fn sync_now(app: AppHandle) -> AppResult<SyncOutcome> {
     .map_err(|e| AppError::Internal(e.to_string()));
     RUNNING.store(false, Ordering::SeqCst);
     result?
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn sync_now(app: AppHandle) -> AppResult<SyncOutcome> {
+    run_guarded(app).await
+}
+
+/// Syncs in the background while sync is on: shortly after start, then every 10 minutes.
+/// Being offline is normal, so failures are only logged. The UI reloads when data arrived.
+pub async fn auto_loop(app: AppHandle) {
+    tokio::time::sleep(std::time::Duration::from_secs(20)).await;
+    loop {
+        let enabled = app.state::<AppState>().read(|c| sync::is_enabled(c)).unwrap_or(false);
+        if enabled {
+            match run_guarded(app.clone()).await {
+                Ok(o) if o.applied + o.deleted > 0 => {
+                    let _ = app.emit("sync-applied", ());
+                }
+                Ok(_) => {}
+                Err(e) => tracing::warn!(error = e.code(), "automatic sync failed: {e}"),
+            }
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(600)).await;
+    }
 }
 
 /// One sync round with the saved repo and token. Shared with the automatic syncs.

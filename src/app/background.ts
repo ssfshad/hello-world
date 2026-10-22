@@ -32,6 +32,25 @@ export function useBackgroundTasks() {
   const ran = useRef(false);
   const qc = useQueryClient();
 
+  // Data arrived from another PC through sync: every screen may be out of date.
+  useEffect(() => {
+    if (!isTauri()) return;
+    let unlisten: (() => void) | undefined;
+    let alive = true;
+    void import('@tauri-apps/api/event').then(({ listen }) =>
+      listen('sync-applied', () => {
+        qc.invalidateQueries();
+      }).then((u) => {
+        if (alive) unlisten = u;
+        else u();
+      }),
+    );
+    return () => {
+      alive = false;
+      unlisten?.();
+    };
+  }, [qc]);
+
   // The Rust core emits "day-changed" when the day boundary passes.
   useEffect(() => {
     if (!isTauri()) return;

@@ -84,6 +84,9 @@ pub struct ApplyReport {
     pub skipped: usize,
     /// Remote rows matched to an existing local row with the same natural key.
     pub aliased: usize,
+    /// `(table, local id)` of every searchable row that changed; re-indexed before commit.
+    #[serde(skip)]
+    pub touched: Vec<(String, String)>,
 }
 
 fn table_spec(name: &str) -> AppResult<&'static TableSpec> {
@@ -311,6 +314,35 @@ fn find_same(conn: &Connection, t: &TableSpec, data: &Map<String, Value>) -> App
     Ok(conn.query_row(&sql, params_from_iter(vals), |r| r.get(0)).optional()?)
 }
 
+/// True when the existing local row of a singleton table was created before the incoming one.
+fn local_is_older(conn: &Connection, t: &TableSpec, local_id: &str, incoming: &Map<String, Value>) -> AppResult<bool> {
+    let Some(Value::String(theirs)) = incoming.get("created_at") else { return Ok(false) };
+    let mine: Option<String> = conn
+        .query_row(&format!("SELECT created_at FROM {} WHERE {} = ?1", t.name, t.pk[0]), [local_id], |r| r.get(0))
+        .optional()?;
+    Ok(mine.is_some_and(|m| m.as_str() <= theirs.as_str()))
+}
+
+/// Rebuilds the search entry for a row that arrived (or was removed) through sync.
+fn reindex(conn: &Connection, table: &str, id: &str) -> AppResult<()> {
+    let (kind, sql) = match table {
+        "concepts" => ("concept", "SELECT deleted_at, learned_day_key, name || COALESCE(char(10) || note, '') || COALESCE(char(10) || example_code, '') FROM concepts WHERE id = ?1"),
+        "diary_entries" => ("diary", "SELECT deleted_at, day_key, body FROM diary_entries WHERE id = ?1"),
+        "error_notes" => ("error", "SELECT deleted_at, day_key, message || COALESCE(char(10) || cause, '') || COALESCE(char(10) || fix, '') FROM error_notes WHERE id = ?1"),
+        "lessons" => ("lesson", "SELECT deleted_at, day_key, title || COALESCE(char(10) || course, '') || COALESCE(char(10) || page_text, '') FROM lessons WHERE id = ?1"),
+        "resources" => ("resource", "SELECT deleted_at, substr(created_at, 1, 10), title || COALESCE(char(10) || body, '') FROM resources WHERE id = ?1"),
+        "problems" => ("problem", "SELECT deleted_at, COALESCE(day_key, created_day_key), title FROM problems WHERE id = ?1"),
+        _ => return Ok(()),
+    };
+    let row: Option<(Option<String>, String, String)> = conn
+        .query_row(sql, [id], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .optional()?;
+    match row {
+        Some((None, day, text)) => super::search::upsert(conn, kind, id, Some(&day), &text),
+        _ => super::search::remove(conn, kind, id),
+    }
+}
+
 type IdMap = HashMap<(String, String), String>;
 
 fn load_idmap(conn: &Connection) -> AppResult<IdMap> {
@@ -360,14 +392,21 @@ fn apply_one(
                         params![t.name, remote_id, existing],
                     )?;
                     idmap.insert((t.name.to_string(), remote_id), existing.clone());
-                    data.insert(t.pk[0].to_string(), Value::String(existing));
                     report.aliased += 1;
+                    // Two profiles meeting for the first time: the older one is the real journey.
+                    if t.singleton && local_is_older(conn, t, &existing, &data)? {
+                        return Ok(());
+                    }
+                    data.insert(t.pk[0].to_string(), Value::String(existing));
                 }
             }
         }
     }
 
     let pk_vals: Vec<SqlValue> = t.pk.iter().map(|c| to_sql(data.get(*c).unwrap_or(&Value::Null))).collect();
+    if t.pk.len() == 1 {
+        report.touched.push((t.name.to_string(), id_string(data.get(t.pk[0]).unwrap_or(&Value::Null))));
+    }
     let cond: Vec<String> = t.pk.iter().enumerate().map(|(i, c)| format!("{c} = ?{}", i + 1)).collect();
 
     if e.deleted {
@@ -443,7 +482,17 @@ pub fn apply_remote(conn: &Connection, remote: &[Entry]) -> AppResult<ApplyRepor
         )?;
     }
 
+    for (table, id) in std::mem::take(&mut report.touched) {
+        reindex(&tx, &table, &id)?;
+    }
     set_state(&tx, "applying", "0")?;
+    // A synced profile means this journal is already set up; skip the welcome screen.
+    if report.applied > 0 {
+        let has_profile: bool = tx.query_row("SELECT EXISTS(SELECT 1 FROM profile)", [], |r| r.get(0))?;
+        if has_profile {
+            crate::services::settings::set_raw(&tx, "onboarding_done", &Value::Bool(true))?;
+        }
+    }
     let broken: Vec<String> = {
         let mut st = tx.prepare("PRAGMA foreign_key_check")?;
         let rows = st.query_map([], |r| Ok(format!("{} → {}", r.get::<_, String>(0)?, r.get::<_, String>(2)?)))?;
@@ -577,19 +626,65 @@ mod tests {
         assert_eq!(count(&b, "SELECT COUNT(*) FROM languages"), 1);
     }
 
+    fn profile(c: &Connection, id: &str, name: &str, created: &str) {
+        c.execute(
+            "INSERT INTO profile(id, display_name, timezone, journey_start, created_at, updated_at)
+             VALUES (?1, ?2, 'UTC', ?3, ?3, ?3)",
+            params![id, name, created],
+        )
+        .unwrap();
+    }
+
+    fn profile_name(c: &Connection) -> String {
+        c.query_row("SELECT display_name FROM profile", [], |r| r.get(0)).unwrap()
+    }
+
     #[test]
-    fn two_profiles_collapse_into_one() {
+    fn two_profiles_collapse_into_one_and_the_older_journey_wins() {
         let (a, b) = (device(), device());
-        for (c, id) in [(&a, "pa"), (&b, "pb")] {
-            c.execute(
-                "INSERT INTO profile(id, display_name, timezone, journey_start, created_at, updated_at)
-                 VALUES (?1, 'Me', 'UTC', '2026-01-01', 't', 't')",
-                [id],
-            )
-            .unwrap();
-        }
+        profile(&a, "pa", "First PC", "2026-01-01T00:00:00Z");
+        profile(&b, "pb", "Second PC", "2026-10-01T00:00:00Z");
+        // Both directions, in either order, end on the older journey.
+        sync(&b, &a);
         sync(&a, &b);
-        assert_eq!(count(&b, "SELECT COUNT(*) FROM profile"), 1);
+        sync(&b, &a);
+        for c in [&a, &b] {
+            assert_eq!(count(c, "SELECT COUNT(*) FROM profile"), 1);
+            assert_eq!(profile_name(c), "First PC");
+            let start: String = c.query_row("SELECT journey_start FROM profile", [], |r| r.get(0)).unwrap();
+            assert_eq!(start, "2026-01-01T00:00:00Z");
+        }
+    }
+
+    #[test]
+    fn synced_notes_are_searchable_on_the_other_pc() {
+        let (a, b) = (device(), device());
+        lang(&a, "l1", "Python");
+        a.execute(
+            "INSERT INTO concepts(id, language_id, name, note, learned_day_key, created_at, updated_at)
+             VALUES ('c1', 'l1', 'recursion', 'a function calling itself', '2026-10-22', 't', 't')",
+            [],
+        )
+        .unwrap();
+        sync(&a, &b);
+        let hits = |c: &Connection, q: &str| count(c, &format!("SELECT COUNT(*) FROM search_index WHERE search_index MATCH '{q}' AND kind = 'concept'"));
+        assert_eq!(hits(&b, "itself"), 1);
+
+        // Deleting it on A (soft delete) takes it out of B's search too.
+        a.execute("UPDATE concepts SET deleted_at = '2026-10-23T00:00:00Z', updated_at = '2026-10-23T00:00:00Z' WHERE id = 'c1'", []).unwrap();
+        a.execute("UPDATE sync_meta SET changed_at = '2099-01-01T00:00:00.000Z' WHERE tbl = 'concepts'", []).unwrap();
+        sync(&a, &b);
+        assert_eq!(hits(&b, "itself"), 0);
+    }
+
+    #[test]
+    fn a_new_pc_that_receives_a_profile_skips_the_welcome_screen() {
+        let (a, b) = (device(), device());
+        profile(&a, "pa", "Me", "2026-01-01T00:00:00Z");
+        crate::services::settings::set_raw(&a, "onboarding_done", &serde_json::Value::Bool(true)).unwrap();
+        assert!(!crate::services::settings::get_all(&b).unwrap().onboarding_done);
+        sync(&a, &b);
+        assert!(crate::services::settings::get_all(&b).unwrap().onboarding_done);
     }
 
     #[test]
